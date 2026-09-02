@@ -20,6 +20,17 @@ import {
 
 type Props = { weddingId: string | null };
 
+function slugify(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+
 const TEXT_FIELDS = [
   { name: "tagline", label: "Frase de abertura", area: false },
   { name: "welcome_message", label: "Mensagem de boas-vindas", area: true },
@@ -126,7 +137,30 @@ export function WeddingContentTab({ weddingId }: Props) {
     onError: (e: Error) => toast.error("Erro ao salvar datas", { description: e.message }),
   });
 
+  const saveSlug = useMutation({
+    mutationFn: async (form: FormData) => {
+      const slug = slugify(String(form.get("slug") ?? ""));
+      if (slug.length < 3) throw new Error("Use pelo menos 3 caracteres (letras, números ou hífen).");
+      const { error } = await supabase.from("weddings").update({ slug }).eq("id", weddingId!);
+      if (error) {
+        throw new Error(
+          error.code === "23505" ? "Esse link já está em uso. Escolha outro." : error.message,
+        );
+      }
+      return slug;
+    },
+    onSuccess: (slug) => {
+      toast.success("Link atualizado!", { description: `/casamento/${slug}` });
+      queryClient.invalidateQueries({ queryKey: ["admin", "wedding-content", weddingId] });
+      queryClient.invalidateQueries({ queryKey: ["wedding"] });
+      queryClient.invalidateQueries({ queryKey: ["main-wedding"] });
+      queryClient.invalidateQueries({ queryKey: ["my-wedding"] });
+    },
+    onError: (e: Error) => toast.error("Erro ao salvar link", { description: e.message }),
+  });
+
   const saveImage = useMutation({
+
     mutationFn: async ({ column, url }: { column: string; url: string }) => {
       const { error } = await supabase
         .from("weddings")
@@ -186,9 +220,55 @@ export function WeddingContentTab({ weddingId }: Props) {
 
   const wedding = weddingQuery.data as Record<string, string | null> | null;
 
+  const currentSlug = wedding?.['slug'] ?? "";
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+
   return (
     <div className="space-y-6">
       <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="text-xl">Endereço do site</CardTitle>
+          <CardDescription>
+            Personalize o link que vocês vão compartilhar com os convidados. Use apenas letras,
+            números e hífens.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form
+            key={`slug-${weddingId}-${currentSlug}`}
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              saveSlug.mutate(new FormData(e.currentTarget));
+            }}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="slug">Link do casamento</Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">{origin}/casamento/</span>
+                <Input
+                  id="slug"
+                  name="slug"
+                  defaultValue={currentSlug}
+                  maxLength={80}
+                  required
+                  placeholder="beatriz-e-pedro"
+                  className="w-full sm:w-64"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Link atual: {origin}/casamento/{currentSlug}
+              </p>
+            </div>
+            <Button type="submit" disabled={saveSlug.isPending}>
+              Salvar link
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-card">
+
         <CardHeader>
           <CardTitle className="text-xl">Datas</CardTitle>
           <CardDescription>
