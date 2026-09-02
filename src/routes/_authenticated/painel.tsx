@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/hooks/useSession";
+import { useMyRoles } from "@/hooks/useRoles";
 import { useMyWedding } from "@/hooks/useMyWedding";
 import { formatBRL, PAYMENT_LABELS, type PaymentMethod } from "@/lib/br";
 
@@ -54,6 +55,7 @@ function toCents(value: string) {
 
 function CouplePanel() {
   const { user } = useSession();
+  const { isOwner, isLoading: rolesLoading } = useMyRoles(user?.id);
   const queryClient = useQueryClient();
   const weddingQuery = useMyWedding(user?.id);
   const wedding = weddingQuery.data;
@@ -174,11 +176,35 @@ function CouplePanel() {
     onError: (e: Error) => toast.error("Erro", { description: e.message }),
   });
 
-  if (weddingQuery.isLoading) {
+  if (rolesLoading || weddingQuery.isLoading) {
     return (
       <div className="min-h-screen">
         <SiteHeader />
         <p className="p-16 text-center text-muted-foreground">Carregando sua área...</p>
+      </div>
+    );
+  }
+
+  if (!isOwner) {
+    return (
+      <div className="min-h-screen">
+        <SiteHeader />
+        <div className="mx-auto max-w-lg px-4 py-16">
+          <Card className="shadow-card">
+            <CardHeader className="text-center">
+              <CardTitle className="font-display text-2xl">Área exclusiva dos noivos</CardTitle>
+              <CardDescription>
+                Sua conta é de convidado. O acesso à área de edição é liberado apenas por um link de
+                convite enviado pelo administrador do site.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center">
+              <Button asChild variant="outline">
+                <Link to="/">Voltar ao site</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }

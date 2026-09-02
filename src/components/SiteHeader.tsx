@@ -1,12 +1,14 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Heart, LogOut } from "lucide-react";
+import { Heart, LogOut, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/useSession";
+import { useMyRoles } from "@/hooks/useRoles";
 
 export function SiteHeader() {
   const { user, loading } = useSession();
+  const { isOwner, isSuperAdmin } = useMyRoles(user?.id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -30,9 +32,19 @@ export function SiteHeader() {
         <nav className="flex items-center gap-2">
           {!loading && user ? (
             <>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/painel">Área dos noivos</Link>
-              </Button>
+              {isSuperAdmin && (
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/super-admin">
+                    <ShieldCheck className="size-4" />
+                    Super admin
+                  </Link>
+                </Button>
+              )}
+              {isOwner && (
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/painel">Área dos noivos</Link>
+                </Button>
+              )}
               <Button asChild variant="ghost" size="sm">
                 <Link to="/meus-presentes">Meus presentes</Link>
               </Button>

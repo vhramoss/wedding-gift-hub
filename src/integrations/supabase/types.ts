@@ -266,6 +266,48 @@ export type Database = {
           },
         ]
       }
+      wedding_invites: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string | null
+          expires_at: string | null
+          id: string
+          note: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          token: string
+          updated_at: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string
+          note?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          token: string
+          updated_at?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string
+          note?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          token?: string
+          updated_at?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
       wedding_messages: {
         Row: {
           approved: boolean
@@ -510,10 +552,14 @@ export type Database = {
         Returns: boolean
       }
       owns_wedding: { Args: { _wedding_id: string }; Returns: boolean }
+      redeem_invite: {
+        Args: { _token: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
       rsvp_open: { Args: { _wedding_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "guest"
+      app_role: "admin" | "guest" | "owner"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -641,7 +687,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "guest"],
+      app_role: ["admin", "guest", "owner"],
     },
   },
 } as const

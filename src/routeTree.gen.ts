@@ -14,7 +14,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedMeusPresentesRouteImport } from './routes/_authenticated/meus-presentes'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
+import { Route as AuthenticatedSuperAdminRouteImport } from './routes/_authenticated/super-admin'
 import { Route as CasamentoSlugRouteImport } from './routes/casamento.$slug'
+import { Route as AuthenticatedConviteTokenRouteImport } from './routes/_authenticated/convite.$token'
 import { Route as CasamentoSlugIndexRouteImport } from './routes/casamento.$slug.index'
 import { Route as CasamentoSlugAvisosRouteImport } from './routes/casamento.$slug.avisos'
 import { Route as CasamentoSlugConfirmarRouteImport } from './routes/casamento.$slug.confirmar'
@@ -51,11 +53,22 @@ const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
   path: '/painel',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSuperAdminRoute = AuthenticatedSuperAdminRouteImport.update({
+  id: '/super-admin',
+  path: '/super-admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const CasamentoSlugRoute = CasamentoSlugRouteImport.update({
   id: '/casamento/$slug',
   path: '/casamento/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedConviteTokenRoute =
+  AuthenticatedConviteTokenRouteImport.update({
+    id: '/convite/$token',
+    path: '/convite/$token',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const CasamentoSlugIndexRoute = CasamentoSlugIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -113,7 +126,9 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/meus-presentes': typeof AuthenticatedMeusPresentesRoute
   '/painel': typeof AuthenticatedPainelRoute
+  '/super-admin': typeof AuthenticatedSuperAdminRoute
   '/casamento/$slug': typeof CasamentoSlugRouteWithChildren
+  '/convite/$token': typeof AuthenticatedConviteTokenRoute
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
   '/casamento/$slug/confirmar': typeof CasamentoSlugConfirmarRoute
   '/casamento/$slug/festa': typeof CasamentoSlugFestaRoute
@@ -130,6 +145,8 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/meus-presentes': typeof AuthenticatedMeusPresentesRoute
   '/painel': typeof AuthenticatedPainelRoute
+  '/super-admin': typeof AuthenticatedSuperAdminRoute
+  '/convite/$token': typeof AuthenticatedConviteTokenRoute
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
   '/casamento/$slug/confirmar': typeof CasamentoSlugConfirmarRoute
   '/casamento/$slug/festa': typeof CasamentoSlugFestaRoute
@@ -148,7 +165,9 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/meus-presentes': typeof AuthenticatedMeusPresentesRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
+  '/_authenticated/super-admin': typeof AuthenticatedSuperAdminRoute
   '/casamento/$slug': typeof CasamentoSlugRouteWithChildren
+  '/_authenticated/convite/$token': typeof AuthenticatedConviteTokenRoute
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
   '/casamento/$slug/confirmar': typeof CasamentoSlugConfirmarRoute
   '/casamento/$slug/festa': typeof CasamentoSlugFestaRoute
@@ -167,7 +186,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/meus-presentes'
     | '/painel'
+    | '/super-admin'
     | '/casamento/$slug'
+    | '/convite/$token'
     | '/casamento/$slug/avisos'
     | '/casamento/$slug/confirmar'
     | '/casamento/$slug/festa'
@@ -184,6 +205,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/meus-presentes'
     | '/painel'
+    | '/super-admin'
+    | '/convite/$token'
     | '/casamento/$slug/avisos'
     | '/casamento/$slug/confirmar'
     | '/casamento/$slug/festa'
@@ -201,7 +224,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/meus-presentes'
     | '/_authenticated/painel'
+    | '/_authenticated/super-admin'
     | '/casamento/$slug'
+    | '/_authenticated/convite/$token'
     | '/casamento/$slug/avisos'
     | '/casamento/$slug/confirmar'
     | '/casamento/$slug/festa'
@@ -258,12 +283,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPainelRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/super-admin': {
+      id: '/_authenticated/super-admin'
+      path: '/super-admin'
+      fullPath: '/super-admin'
+      preLoaderRoute: typeof AuthenticatedSuperAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/casamento/$slug': {
       id: '/casamento/$slug'
       path: '/casamento/$slug'
       fullPath: '/casamento/$slug'
       preLoaderRoute: typeof CasamentoSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/convite/$token': {
+      id: '/_authenticated/convite/$token'
+      path: '/convite/$token'
+      fullPath: '/convite/$token'
+      preLoaderRoute: typeof AuthenticatedConviteTokenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/casamento/$slug/': {
       id: '/casamento/$slug/'
@@ -341,11 +380,15 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedMeusPresentesRoute: typeof AuthenticatedMeusPresentesRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
+  AuthenticatedSuperAdminRoute: typeof AuthenticatedSuperAdminRoute
+  AuthenticatedConviteTokenRoute: typeof AuthenticatedConviteTokenRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMeusPresentesRoute: AuthenticatedMeusPresentesRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
+  AuthenticatedSuperAdminRoute: AuthenticatedSuperAdminRoute,
+  AuthenticatedConviteTokenRoute: AuthenticatedConviteTokenRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
