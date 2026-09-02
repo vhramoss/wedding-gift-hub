@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Copy, Link2, ShieldCheck, Trash2 } from "lucide-react";
 
@@ -14,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSession } from "@/hooks/useSession";
 import { useMyRoles } from "@/hooks/useRoles";
-import { claimFirstAdmin } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/super-admin")({
   head: () => ({
@@ -43,7 +41,7 @@ function SuperAdminPage() {
   const { user } = useSession();
   const { isSuperAdmin, isLoading } = useMyRoles(user?.id);
   const queryClient = useQueryClient();
-  const claim = useServerFn(claimFirstAdmin);
+  const [isClaimingAdmin, setIsClaimingAdmin] = useState(false);
   const [role, setRole] = useState<"owner" | "guest">("owner");
   const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
@@ -64,6 +62,7 @@ function SuperAdminPage() {
 
   const createInvite = useMutation({
     mutationFn: async () => {
+      if (!user) throw new Error("Faça login novamente para gerar o convite.");
       const expires =
         Number(days) > 0
           ? new Date(Date.now() + Number(days) * 86_400_000).toISOString()
@@ -74,7 +73,7 @@ function SuperAdminPage() {
         email: email.trim() || null,
         note: note.trim() || null,
         expires_at: expires,
-        created_by: user!.id,
+        created_by: user.id,
       });
       if (error) throw error;
     },
@@ -125,17 +124,33 @@ function SuperAdminPage() {
             <CardContent className="flex flex-col items-center gap-3">
               <Button
                 variant="outline"
+                disabled={isClaimingAdmin || !user}
                 onClick={async () => {
+                  if (!user) return;
+                  setIsClaimingAdmin(true);
                   try {
-                    const res = await claim({});
-                    toast[res.granted ? "success" : "error"](res.reason);
-                    queryClient.invalidateQueries({ queryKey: ["my-roles"] });
+                    const { error } = await supabase
+                      .from("user_roles")
+                      .insert({ user_id: user.id, role: "admin" });
+                    if (error) throw error;
+                    toast.success("Você agora é administrador.");
+                    await queryClient.invalidateQueries({ queryKey: ["my-roles"] });
                   } catch (e) {
-                    toast.error((e as Error).message);
+                    const message = e instanceof Error ? e.message : "Não foi possível liberar o acesso.";
+                    toast.error(
+                      message.includes("duplicate") ||
+                        message.includes("row-level security") ||
+                        message.includes("Já existe")
+                        ? "Já existe um administrador cadastrado."
+                        : message,
+                    );
+                  } finally {
+                    setIsClaimingAdmin(false);
                   }
                 }}
               >
-                <ShieldCheck className="size-4" /> Tornar-me super admin
+                <ShieldCheck className="size-4" />
+                {isClaimingAdmin ? "Liberando acesso..." : "Tornar-me super admin"}
               </Button>
               <p className="text-xs text-muted-foreground">
                 Disponível apenas enquanto não houver nenhum super administrador.
