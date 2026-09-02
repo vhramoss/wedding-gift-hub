@@ -87,7 +87,7 @@ function AuthPage() {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: {
@@ -104,12 +104,8 @@ function AuthPage() {
       toast.error("Não foi possível cadastrar", { description: error.message });
       return;
     }
-    if (!data.session) {
-      toast.success("Cadastro criado!", {
-        description: "Confirme seu e-mail para acessar a lista de presentes.",
-      });
-      return;
-    }
+    // Confirmação por e-mail desativada (acesso imediato): o signUp já
+    // retorna a sessão preenchida e o convidado entra direto.
     toast.success("Cadastro concluído!");
     navigate({ to: target, replace: true });
   }
