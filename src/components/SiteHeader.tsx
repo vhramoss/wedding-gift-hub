@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/useSession";
 import { useMyRoles } from "@/hooks/useRoles";
+import { BRAND } from "@/lib/brand";
 
 export function SiteHeader() {
   const { user, loading } = useSession();
@@ -25,7 +26,10 @@ export function SiteHeader() {
         <Link to="/" className="flex items-center gap-2">
           <Heart className="size-5 text-accent" />
           <span className="font-display text-xl font-semibold tracking-wide">
-            Nós Dois · Lista de Presentes
+            {BRAND.name}
+            <span className="hidden text-sm font-normal text-muted-foreground sm:inline">
+              {" "}· {BRAND.tagline}
+            </span>
           </span>
         </Link>
 
@@ -36,7 +40,7 @@ export function SiteHeader() {
                 <Button asChild variant="ghost" size="sm">
                   <Link to="/super-admin">
                     <ShieldCheck className="size-4" />
-                    Super admin
+                    Administrar casamentos
                   </Link>
                 </Button>
               )}

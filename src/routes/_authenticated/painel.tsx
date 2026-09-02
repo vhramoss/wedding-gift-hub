@@ -6,6 +6,8 @@ import { ExternalLink, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AnnouncementsTab } from "@/components/admin/AnnouncementsTab";
+import { InviteManager } from "@/components/InviteManager";
+
 import { WeddingContentTab } from "@/components/admin/WeddingContentTab";
 import { WeddingPhotosTab } from "@/components/admin/WeddingPhotosTab";
 import { Button } from "@/components/ui/button";
@@ -297,6 +299,8 @@ function CouplePanel() {
             <TabsTrigger value="gifts">Presentes</TabsTrigger>
             <TabsTrigger value="orders">Pedidos</TabsTrigger>
             <TabsTrigger value="rsvps">Confirmações</TabsTrigger>
+            <TabsTrigger value="invites">Convites</TabsTrigger>
+
           </TabsList>
 
           <TabsContent value="content" className="mt-6">
@@ -464,7 +468,17 @@ function CouplePanel() {
               <p className="text-muted-foreground">Nenhuma confirmação registrada.</p>
             ) : null}
           </TabsContent>
+
+          <TabsContent value="invites" className="mt-6">
+            <InviteManager
+              weddingId={weddingId}
+              roles={["guest"]}
+              title="Convidar convidados"
+              description="Gere um link e um QR Code para cada convidado criar o login e acessar o site."
+            />
+          </TabsContent>
         </Tabs>
+
       </div>
     </div>
   );
