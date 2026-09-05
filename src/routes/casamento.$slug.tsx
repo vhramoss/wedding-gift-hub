@@ -140,7 +140,10 @@ function WeddingLayout() {
         </div>
       </nav>
 
-      <section className="relative border-b border-border/70 bg-romance">
+      <section
+        className="relative border-b border-border/70"
+        style={{ backgroundImage: "var(--hero-gradient)" }}
+      >
         {wedding.cover_image_url ? (
           <img
             src={wedding.cover_image_url}

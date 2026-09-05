@@ -77,6 +77,8 @@ export function FinanceTab({ weddingId }: Props) {
         amount_cents: amount,
         paid_cents: toCents(String(form.get("paid") ?? "")),
         due_date: String(form.get("due") ?? "") || null,
+        installments: Math.max(1, Number(form.get("installments") ?? 1) || 1),
+        installments_paid: Math.max(0, Number(form.get("installmentsPaid") ?? 0) || 0),
         pay_from_gifts: form.get("fromGifts") === "on",
         notes: String(form.get("notes") ?? "").trim() || null,
       });
@@ -90,10 +92,18 @@ export function FinanceTab({ weddingId }: Props) {
   });
 
   const settle = useMutation({
-    mutationFn: async ({ id, amountCents }: { id: string; amountCents: number }) => {
+    mutationFn: async ({
+      id,
+      amountCents,
+      installments,
+    }: {
+      id: string;
+      amountCents: number;
+      installments: number;
+    }) => {
       const { error } = await supabase
         .from("wedding_expenses")
-        .update({ paid_cents: amountCents, status: "paid" })
+        .update({ paid_cents: amountCents, status: "paid", installments_paid: installments })
         .eq("id", id);
       if (error) throw error;
     },
@@ -201,6 +211,29 @@ export function FinanceTab({ weddingId }: Props) {
               <Label htmlFor="expense-paid">Já pago (R$)</Label>
               <Input id="expense-paid" name="paid" placeholder="0,00" />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="expense-installments">Número de parcelas</Label>
+              <Input
+                id="expense-installments"
+                name="installments"
+                type="number"
+                min={1}
+                max={99}
+                defaultValue={1}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="expense-installments-paid">Parcelas já pagas</Label>
+              <Input
+                id="expense-installments-paid"
+                name="installmentsPaid"
+                type="number"
+                min={0}
+                max={99}
+                defaultValue={0}
+              />
+            </div>
+
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="expense-notes">Observações</Label>
               <Textarea id="expense-notes" name="notes" maxLength={500} />
@@ -244,6 +277,12 @@ export function FinanceTab({ weddingId }: Props) {
                     <Badge variant={pending <= 0 ? "default" : "secondary"}>
                       {pending <= 0 ? "Quitada" : `Falta ${formatBRL(pending)}`}
                     </Badge>
+                    {expense.installments > 1 ? (
+                      <Badge variant="outline">
+                        {expense.installments_paid}/{expense.installments} parcelas de{" "}
+                        {formatBRL(Math.round(expense.amount_cents / expense.installments))}
+                      </Badge>
+                    ) : null}
                   </div>
                   {expense.notes ? (
                     <p className="mt-2 text-sm italic text-muted-foreground">{expense.notes}</p>
@@ -262,7 +301,11 @@ export function FinanceTab({ weddingId }: Props) {
                     <Button
                       size="sm"
                       onClick={() =>
-                        settle.mutate({ id: expense.id, amountCents: expense.amount_cents })
+                        settle.mutate({
+                          id: expense.id,
+                          amountCents: expense.amount_cents,
+                          installments: expense.installments,
+                        })
                       }
                     >
                       <CheckCircle2 className="size-4" /> Quitar

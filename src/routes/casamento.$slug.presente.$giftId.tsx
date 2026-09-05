@@ -1,8 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Check, Copy, CreditCard, QrCode, ShieldCheck } from "lucide-react";
+import {
+  Check,
+  CheckCircle2,
+  Copy,
+  CreditCard,
+  Loader2,
+  QrCode,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,16 +31,19 @@ import {
 } from "@/components/ui/select";
 import { useSession } from "@/hooks/useSession";
 import {
-  buildPixPayload,
-  cardBrand,
   computeCharge,
   formatBRL,
-  luhn,
-  maskCPF,
   onlyDigits,
   PAYMENT_LABELS,
   type PaymentMethod,
 } from "@/lib/br";
+import {
+  createPixPayment,
+  getMercadoPagoConfig,
+  processCardPayment,
+} from "@/lib/mercadopago.functions";
+
+const MercadoPagoCardPayment = lazy(() => import("@/components/MercadoPagoCardPayment"));
 
 export const Route = createFileRoute("/casamento/$slug/presente/$giftId")({
   head: () => ({
@@ -39,17 +52,20 @@ export const Route = createFileRoute("/casamento/$slug/presente/$giftId")({
       {
         name: "description",
         content:
-          "Escolha a forma de pagamento — Pix, débito ou crédito parcelado — e finalize o presente.",
+          "Escolha a forma de pagamento — Pix ou cartão — e finalize o presente com segurança.",
       },
       { property: "og:title", content: "Presentear os noivos · Pagamento" },
       {
         property: "og:description",
-        content: "Finalize o presente com Pix, cartão de débito ou crédito parcelado.",
+        content: "Finalize o presente com Pix ou cartão de crédito.",
       },
     ],
   }),
   component: CheckoutPage,
 });
+
+type Phase = "form" | "pix" | "card" | "result";
+type PayResult = { status: "paid" | "pending" | "cancelled"; detail: string };
 
 function CheckoutPage() {
   const { slug, giftId } = Route.useParams();
@@ -59,13 +75,25 @@ function CheckoutPage() {
   const [method, setMethod] = useState<PaymentMethod>("pix");
   const [installments, setInstallments] = useState(1);
   const [messageToCouple, setMessageToCouple] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardName, setCardName] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
-  const [cardCpf, setCardCpf] = useState("");
-  const [pixOrder, setPixOrder] = useState<{ payload: string; id: string } | null>(null);
+  const [phase, setPhase] = useState<Phase>("form");
+  const [pixData, setPixData] = useState<{
+    qrCode: string;
+    qrCodeBase64: string;
+    orderId: string;
+  } | null>(null);
+  const [cardOrderId, setCardOrderId] = useState<string | null>(null);
+  const [cardResult, setCardResult] = useState<PayResult | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const mpConfig = useQuery({
+    queryKey: ["mp-config"],
+    queryFn: () => getMercadoPagoConfig(),
+  });
+  const mpEnabled = Boolean(mpConfig.data?.enabled);
+  const mpPublicKey = mpConfig.data?.publicKey ?? "";
+
+  const createPix = useServerFn(createPixPayment);
+  const processCard = useServerFn(processCardPayment);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -112,16 +140,10 @@ function CheckoutPage() {
     [gift?.price_cents, method, installments],
   );
 
+  // Cria o pedido pendente (mesmo schema de antes, sem marcar como pago).
   const createOrder = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (targetMethod: PaymentMethod) => {
       if (!gift || !user) throw new Error("Sessão expirada.");
-      if (method === "credit" || method === "debit") {
-        if (!luhn(cardNumber)) throw new Error("Número do cartão inválido.");
-        if (cardName.trim().length < 3) throw new Error("Informe o nome impresso no cartão.");
-        if (!/^\d{2}\/\d{2}$/.test(cardExpiry)) throw new Error("Validade no formato MM/AA.");
-        if (onlyDigits(cardCvv).length < 3) throw new Error("CVV inválido.");
-      }
-      const status = method === "pix" ? "pending" : "paid";
       const { data, error } = await supabase
         .from("orders")
         .insert({
@@ -129,43 +151,105 @@ function CheckoutPage() {
           gift_id: gift.id,
           user_id: user.id,
           guest_name: profileQuery.data?.full_name ?? "",
-          guest_cpf: profileQuery.data?.cpf ?? (onlyDigits(cardCpf) || null),
-          payment_method: method,
-          installments: method === "credit" ? installments : 1,
+          guest_cpf: profileQuery.data?.cpf ?? null,
+          payment_method: targetMethod,
+          installments: targetMethod === "credit" ? installments : 1,
           amount_cents: gift.price_cents,
           fee_cents: charge.feeCents,
           total_cents: charge.totalCents,
           message: messageToCouple.trim() || null,
-          status,
-          paid_at: status === "paid" ? new Date().toISOString() : null,
+          status: "pending",
+          paid_at: null,
         })
         .select("id")
         .single();
       if (error) throw error;
-      return { id: data.id, status };
+      return data.id as string;
     },
-    onSuccess: (result) => {
-      if (result.status === "pending" && wedding?.pix_key) {
-        setPixOrder({
-          id: result.id,
-          payload: buildPixPayload({
-            key: wedding.pix_key,
-            holder: wedding.pix_holder ?? `${wedding.bride_name} ${wedding.groom_name}`,
-            amountCents: charge.totalCents,
-            txid: result.id.replace(/-/g, "").slice(0, 25),
-          }),
-        });
-        toast.success("Pedido criado! Pague com o código Pix abaixo.");
-      } else if (result.status === "pending") {
-        toast.warning("Pedido registrado, mas os noivos ainda não cadastraram a chave Pix.");
-        navigate({ to: "/meus-presentes" });
-      } else {
-        toast.success("Pagamento aprovado. Obrigado pelo presente!");
+    onError: (e: Error) => toast.error("Não foi possível criar o pedido", { description: e.message }),
+  });
+
+  // --- Pix flow ---
+  const startPix = useMutation({
+    mutationFn: async () => {
+      const orderId = await createOrder.mutateAsync("pix");
+      const res = await createPix({ data: { orderId } });
+      return { orderId, ...res };
+    },
+    onSuccess: (res) => {
+      setPixData({
+        qrCode: res.qrCode,
+        qrCodeBase64: res.qrCodeBase64,
+        orderId: res.orderId,
+      });
+      setPhase("pix");
+      toast.success("Pedido criado! Pague com o QR Code abaixo.");
+    },
+    onError: (e: Error) => toast.error("Falha ao gerar Pix", { description: e.message }),
+  });
+
+  // Poll status do pedido Pix
+  useEffect(() => {
+    if (phase !== "pix" || !pixData?.orderId) return;
+    let active = true;
+    const check = async () => {
+      const { data } = await supabase
+        .from("orders")
+        .select("status")
+        .eq("id", pixData.orderId)
+        .maybeSingle();
+      if (active && data?.status === "paid") {
+        toast.success("Pagamento confirmado! Obrigado pelo presente.");
         navigate({ to: "/meus-presentes" });
       }
+    };
+    const interval = setInterval(check, 5000);
+    check();
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [phase, pixData, navigate]);
+
+  // --- Card flow ---
+  const startCard = useMutation({
+    mutationFn: async () => {
+      const orderId = await createOrder.mutateAsync(method);
+      setCardOrderId(orderId);
+      setPhase("card");
     },
-    onError: (e: Error) => toast.error("Não foi possível concluir", { description: e.message }),
+    onError: (e: Error) => toast.error("Não foi possível iniciar o pagamento", { description: e.message }),
   });
+
+  const submitCard = async (cardData: {
+    token: string;
+    paymentMethodId: string;
+    issuerId?: string;
+    installments: number;
+  }) => {
+    if (!cardOrderId) return;
+    try {
+      const res = await processCard({
+        data: { orderId: cardOrderId, ...cardData },
+      });
+      setCardResult({ status: res.status, detail: res.detail });
+      setPhase("result");
+      if (res.status === "paid") {
+        toast.success("Pagamento aprovado. Obrigado pelo presente!");
+        setTimeout(() => navigate({ to: "/meus-presentes" }), 2500);
+      } else if (res.status === "cancelled") {
+        toast.error("Pagamento recusado.");
+      } else {
+        toast.warning("Pagamento em processamento. Aguarde a confirmação.");
+      }
+    } catch (e) {
+      toast.error("Falha no pagamento", {
+        description: e instanceof Error ? e.message : undefined,
+      });
+      setCardResult({ status: "cancelled", detail: "Erro ao processar" });
+      setPhase("result");
+    }
+  };
 
   if (giftQuery.isLoading || loading) {
     return (
@@ -193,7 +277,31 @@ function CheckoutPage() {
     );
   }
 
-  if (pixOrder) {
+  if (!mpEnabled && phase === "form") {
+    return (
+      <div>
+        <div className="mx-auto max-w-2xl px-4 py-16">
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="font-display text-2xl">Pagamento indisponível</CardTitle>
+              <CardDescription>
+                O pagamento online ainda não foi ativado pelo administrador do site.
+                Entre em contato para finalizar este presente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline">
+                <Link to="/casamento/$slug" params={{ slug }}>Voltar</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Tela Pix ----------
+  if (phase === "pix" && pixData) {
     return (
       <div>
         <div className="mx-auto max-w-2xl px-4 py-16">
@@ -203,8 +311,8 @@ function CheckoutPage() {
                 <QrCode className="size-5 text-accent" /> Pague com Pix
               </CardTitle>
               <CardDescription>
-                Copie o código abaixo e cole no aplicativo do seu banco. Assim que o pagamento cair,
-                os noivos confirmam o presente.
+                Escaneie o QR Code ou copie o código e cole no app do seu banco.
+                Assim que o pagamento cair, o presente é confirmado automaticamente.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -214,13 +322,25 @@ function CheckoutPage() {
                   {formatBRL(charge.totalCents)}
                 </p>
               </div>
+
+              {pixData.qrCodeBase64 ? (
+                <div className="flex justify-center">
+                  <img
+                    src={pixData.qrCodeBase64}
+                    alt="QR Code Pix"
+                    className="h-64 w-64 rounded-lg border bg-white p-2"
+                  />
+                </div>
+              ) : null}
+
               <div className="break-all rounded-lg border bg-card p-4 font-mono text-xs">
-                {pixOrder.payload}
+                {pixData.qrCode}
               </div>
+
               <Button
                 className="w-full"
                 onClick={async () => {
-                  await navigator.clipboard.writeText(pixOrder.payload);
+                  await navigator.clipboard.writeText(pixData.qrCode);
                   setCopied(true);
                   toast.success("Código Pix copiado!");
                 }}
@@ -228,6 +348,12 @@ function CheckoutPage() {
                 {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
                 Copiar código Pix
               </Button>
+
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Aguardando confirmação do pagamento…
+              </div>
+
               <Button asChild variant="outline" className="w-full">
                 <Link to="/meus-presentes">Ver meus presentes</Link>
               </Button>
@@ -238,6 +364,107 @@ function CheckoutPage() {
     );
   }
 
+  // ---------- Tela Cartão (brick) ----------
+  if (phase === "card" && cardOrderId) {
+    return (
+      <div>
+        <div className="mx-auto max-w-2xl px-4 py-16">
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-display text-2xl">
+                <CreditCard className="size-5 text-accent" /> Pagar com cartão
+              </CardTitle>
+              <CardDescription>
+                Preencha os dados do cartão com segurança. O processamento é feito
+                pelo Mercado Pago.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg border bg-secondary/50 p-4 text-center">
+                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-3xl font-medium text-primary">
+                  {formatBRL(charge.totalCents)}
+                </p>
+                {method === "credit" && installments > 1 ? (
+                  <p className="text-xs text-muted-foreground">
+                    {installments}x de {formatBRL(charge.installmentCents)}
+                  </p>
+                ) : null}
+              </div>
+
+              <Suspense
+                fallback={
+                  <div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
+                    Carregando pagamento por cartão…
+                  </div>
+                }
+              >
+                <MercadoPagoCardPayment
+                  publicKey={mpPublicKey}
+                  amount={charge.totalCents / 100}
+                  onSubmit={submitCard}
+                  onError={(m) => toast.error("Erro no cartão", { description: m })}
+                />
+              </Suspense>
+
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setPhase("form");
+                  setCardOrderId(null);
+                }}
+              >
+                Voltar
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Tela Resultado cartão ----------
+  if (phase === "result" && cardResult) {
+    const isPaid = cardResult.status === "paid";
+    const isPending = cardResult.status === "pending";
+    return (
+      <div>
+        <div className="mx-auto max-w-2xl px-4 py-16">
+          <Card className="shadow-card text-center">
+            <CardContent className="flex flex-col items-center gap-4 py-12">
+              {isPaid ? (
+                <CheckCircle2 className="size-16 text-emerald-500" />
+              ) : isPending ? (
+                <Loader2 className="size-16 animate-spin text-primary" />
+              ) : (
+                <XCircle className="size-16 text-destructive" />
+              )}
+              <h2 className="font-display text-2xl">
+                {isPaid
+                  ? "Pagamento aprovado!"
+                  : isPending
+                    ? "Pagamento em processamento"
+                    : "Pagamento recusado"}
+              </h2>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                {isPaid
+                  ? "Seu presente foi confirmado. Obrigado!"
+                  : isPending
+                    ? "Aguarde alguns instantes pela confirmação."
+                    : cardResult.detail || "Tente novamente com outro cartão."}
+              </p>
+              <Button asChild>
+                <Link to="/meus-presentes">Ver meus presentes</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Formulário inicial ----------
   return (
     <div>
       <div className="mx-auto grid max-w-5xl gap-8 px-4 py-12 lg:grid-cols-[1fr_360px]">
@@ -258,8 +485,8 @@ function CheckoutPage() {
               <CardTitle className="text-xl">Forma de pagamento</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="grid gap-3 sm:grid-cols-3">
-                {(["pix", "debit", "credit"] as PaymentMethod[]).map((m) => (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(["pix", "credit"] as PaymentMethod[]).map((m) => (
                   <button
                     key={m}
                     type="button"
@@ -280,7 +507,7 @@ function CheckoutPage() {
                     )}
                     <p className="mt-2 text-sm font-medium">{PAYMENT_LABELS[m]}</p>
                     <p className="text-xs text-muted-foreground">
-                      {m === "credit" ? "Até 12x com taxa" : "Sem taxa"}
+                      {m === "credit" ? "Até 12x com taxa" : "Aprovação imediata"}
                     </p>
                   </button>
                 ))}
@@ -308,73 +535,6 @@ function CheckoutPage() {
                       })}
                     </SelectContent>
                   </Select>
-                </div>
-              ) : null}
-
-              {method !== "pix" ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="cardNumber">Número do cartão</Label>
-                    <Input
-                      id="cardNumber"
-                      inputMode="numeric"
-                      placeholder="0000 0000 0000 0000"
-                      value={cardNumber}
-                      maxLength={23}
-                      onChange={(e) =>
-                        setCardNumber(
-                          onlyDigits(e.target.value)
-                            .slice(0, 19)
-                            .replace(/(\d{4})(?=\d)/g, "$1 "),
-                        )
-                      }
-                    />
-                    {cardNumber ? (
-                      <p className="text-xs text-muted-foreground">{cardBrand(cardNumber)}</p>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="cardName">Nome impresso no cartão</Label>
-                    <Input
-                      id="cardName"
-                      value={cardName}
-                      maxLength={80}
-                      onChange={(e) => setCardName(e.target.value.toUpperCase())}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cardExpiry">Validade</Label>
-                    <Input
-                      id="cardExpiry"
-                      placeholder="MM/AA"
-                      value={cardExpiry}
-                      maxLength={5}
-                      onChange={(e) => {
-                        const d = onlyDigits(e.target.value).slice(0, 4);
-                        setCardExpiry(d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d);
-                      }}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cardCvv">CVV</Label>
-                    <Input
-                      id="cardCvv"
-                      inputMode="numeric"
-                      maxLength={4}
-                      value={cardCvv}
-                      onChange={(e) => setCardCvv(onlyDigits(e.target.value))}
-                    />
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="cardCpf">CPF do titular</Label>
-                    <Input
-                      id="cardCpf"
-                      inputMode="numeric"
-                      placeholder="000.000.000-00"
-                      value={cardCpf || maskCPF(profileQuery.data?.cpf ?? "")}
-                      onChange={(e) => setCardCpf(maskCPF(e.target.value))}
-                    />
-                  </div>
                 </div>
               ) : null}
 
@@ -420,17 +580,30 @@ function CheckoutPage() {
                   {installments}x de {formatBRL(charge.installmentCents)}
                 </p>
               ) : null}
-              <Button
-                className="mt-4 w-full"
-                size="lg"
-                disabled={createOrder.isPending}
-                onClick={() => createOrder.mutate()}
-              >
-                {createOrder.isPending ? "Processando..." : "Confirmar e pagar"}
-              </Button>
+
+              {method === "pix" ? (
+                <Button
+                  className="mt-4 w-full"
+                  size="lg"
+                  disabled={startPix.isPending || createOrder.isPending}
+                  onClick={() => startPix.mutate()}
+                >
+                  {startPix.isPending ? "Gerando Pix..." : "Pagar com Pix"}
+                </Button>
+              ) : (
+                <Button
+                  className="mt-4 w-full"
+                  size="lg"
+                  disabled={startCard.isPending || createOrder.isPending}
+                  onClick={() => startCard.mutate()}
+                >
+                  {startCard.isPending ? "Iniciando..." : "Pagar com cartão"}
+                </Button>
+              )}
+
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
                 <ShieldCheck className="size-4" />
-                Os dados do cartão não são armazenados no banco de dados.
+                Pagamento processado pelo Mercado Pago. Seus dados ficam protegidos.
               </p>
             </CardContent>
           </Card>

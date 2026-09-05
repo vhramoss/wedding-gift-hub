@@ -70,6 +70,7 @@ export type Database = {
       orders: {
         Row: {
           amount_cents: number
+          commission_cents: number
           created_at: string
           fee_cents: number
           gift_id: string
@@ -78,8 +79,12 @@ export type Database = {
           id: string
           installments: number
           message: string | null
+          mp_payment_id: number | null
           paid_at: string | null
           payment_method: string
+          pix_payload: string | null
+          pix_qr_base64: string | null
+          provider: string
           status: string
           total_cents: number
           updated_at: string
@@ -88,6 +93,7 @@ export type Database = {
         }
         Insert: {
           amount_cents: number
+          commission_cents?: number
           created_at?: string
           fee_cents?: number
           gift_id: string
@@ -96,8 +102,12 @@ export type Database = {
           id?: string
           installments?: number
           message?: string | null
+          mp_payment_id?: number | null
           paid_at?: string | null
           payment_method: string
+          pix_payload?: string | null
+          pix_qr_base64?: string | null
+          provider?: string
           status?: string
           total_cents: number
           updated_at?: string
@@ -106,6 +116,7 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          commission_cents?: number
           created_at?: string
           fee_cents?: number
           gift_id?: string
@@ -114,8 +125,12 @@ export type Database = {
           id?: string
           installments?: number
           message?: string | null
+          mp_payment_id?: number | null
           paid_at?: string | null
           payment_method?: string
+          pix_payload?: string | null
+          pix_qr_base64?: string | null
+          provider?: string
           status?: string
           total_cents?: number
           updated_at?: string
@@ -321,6 +336,8 @@ export type Database = {
           created_at: string
           due_date: string | null
           id: string
+          installments: number
+          installments_paid: number
           notes: string | null
           paid_cents: number
           pay_from_gifts: boolean
@@ -336,6 +353,8 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           id?: string
+          installments?: number
+          installments_paid?: number
           notes?: string | null
           paid_cents?: number
           pay_from_gifts?: boolean
@@ -351,6 +370,8 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           id?: string
+          installments?: number
+          installments_paid?: number
           notes?: string | null
           paid_cents?: number
           pay_from_gifts?: boolean

@@ -17,6 +17,7 @@ import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedSuperAdminRouteImport } from './routes/_authenticated/super-admin'
 import { Route as CasamentoSlugRouteImport } from './routes/casamento.$slug'
 import { Route as AuthenticatedConviteTokenRouteImport } from './routes/_authenticated/convite.$token'
+import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago-webhook'
 import { Route as CasamentoSlugIndexRouteImport } from './routes/casamento.$slug.index'
 import { Route as CasamentoSlugAvisosRouteImport } from './routes/casamento.$slug.avisos'
 import { Route as CasamentoSlugConfirmarRouteImport } from './routes/casamento.$slug.confirmar'
@@ -69,6 +70,12 @@ const AuthenticatedConviteTokenRoute =
     id: '/convite/$token',
     path: '/convite/$token',
     getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const ApiPublicMercadopagoWebhookRoute =
+  ApiPublicMercadopagoWebhookRouteImport.update({
+    id: '/api/public/mercadopago-webhook',
+    path: '/api/public/mercadopago-webhook',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const CasamentoSlugIndexRoute = CasamentoSlugIndexRouteImport.update({
   id: '/',
@@ -136,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/super-admin': typeof AuthenticatedSuperAdminRoute
   '/casamento/$slug': typeof CasamentoSlugRouteWithChildren
   '/convite/$token': typeof AuthenticatedConviteTokenRoute
+  '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
   '/casamento/$slug/confirmar': typeof CasamentoSlugConfirmarRoute
   '/casamento/$slug/festa': typeof CasamentoSlugFestaRoute
@@ -155,6 +163,7 @@ export interface FileRoutesByTo {
   '/painel': typeof AuthenticatedPainelRoute
   '/super-admin': typeof AuthenticatedSuperAdminRoute
   '/convite/$token': typeof AuthenticatedConviteTokenRoute
+  '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
   '/casamento/$slug/confirmar': typeof CasamentoSlugConfirmarRoute
   '/casamento/$slug/festa': typeof CasamentoSlugFestaRoute
@@ -177,6 +186,7 @@ export interface FileRoutesById {
   '/_authenticated/super-admin': typeof AuthenticatedSuperAdminRoute
   '/casamento/$slug': typeof CasamentoSlugRouteWithChildren
   '/_authenticated/convite/$token': typeof AuthenticatedConviteTokenRoute
+  '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
   '/casamento/$slug/confirmar': typeof CasamentoSlugConfirmarRoute
   '/casamento/$slug/festa': typeof CasamentoSlugFestaRoute
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/super-admin'
     | '/casamento/$slug'
     | '/convite/$token'
+    | '/api/public/mercadopago-webhook'
     | '/casamento/$slug/avisos'
     | '/casamento/$slug/confirmar'
     | '/casamento/$slug/festa'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/super-admin'
     | '/convite/$token'
+    | '/api/public/mercadopago-webhook'
     | '/casamento/$slug/avisos'
     | '/casamento/$slug/confirmar'
     | '/casamento/$slug/festa'
@@ -239,6 +251,7 @@ export interface FileRouteTypes {
     | '/_authenticated/super-admin'
     | '/casamento/$slug'
     | '/_authenticated/convite/$token'
+    | '/api/public/mercadopago-webhook'
     | '/casamento/$slug/avisos'
     | '/casamento/$slug/confirmar'
     | '/casamento/$slug/festa'
@@ -257,6 +270,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   CasamentoSlugRoute: typeof CasamentoSlugRouteWithChildren
+  ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -316,6 +330,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/convite/$token'
       preLoaderRoute: typeof AuthenticatedConviteTokenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/mercadopago-webhook': {
+      id: '/api/public/mercadopago-webhook'
+      path: '/api/public/mercadopago-webhook'
+      fullPath: '/api/public/mercadopago-webhook'
+      preLoaderRoute: typeof ApiPublicMercadopagoWebhookRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/casamento/$slug/': {
       id: '/casamento/$slug/'
@@ -451,6 +472,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   CasamentoSlugRoute: CasamentoSlugRouteWithChildren,
+  ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

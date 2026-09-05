@@ -96,14 +96,62 @@ export function resolveTheme(wedding: WeddingTheme | null | undefined) {
 /** Variáveis CSS aplicadas no container do site do casal. */
 export function themeStyle(wedding: WeddingTheme | null | undefined): CSSProperties {
   const t = resolveTheme(wedding);
-  return {
-    "--primary": t.primary,
-    "--ring": t.primary,
-    "--accent": t.accent,
-    "--accent-foreground": "#ffffff",
+  const mix = (a: string, b: string, pct: number) =>
+    `color-mix(in oklab, ${a} ${pct}%, ${b})`;
+
+  const foreground = mix(t.primary, "#1b1b1b", 55);
+  const muted = mix(t.primary, t.background, 8);
+  const mutedForeground = mix(t.primary, "#767676", 40);
+  const border = mix(t.primary, t.background, 16);
+  const card = mix("#ffffff", t.background, 65);
+
+  const vars: Record<string, string> = {
     "--background": t.background,
+    "--color-background": t.background,
+    "--foreground": foreground,
+    "--color-foreground": foreground,
+    "--card": card,
+    "--color-card": card,
+    "--card-foreground": foreground,
+    "--color-card-foreground": foreground,
+    "--popover": card,
+    "--color-popover": card,
+    "--popover-foreground": foreground,
+    "--color-popover-foreground": foreground,
+    "--primary": t.primary,
+    "--color-primary": t.primary,
+    "--primary-foreground": "#ffffff",
+    "--color-primary-foreground": "#ffffff",
+    "--secondary": muted,
+    "--color-secondary": muted,
+    "--secondary-foreground": foreground,
+    "--color-secondary-foreground": foreground,
+    "--muted": muted,
+    "--color-muted": muted,
+    "--muted-foreground": mutedForeground,
+    "--color-muted-foreground": mutedForeground,
+    "--accent": t.accent,
+    "--color-accent": t.accent,
+    "--accent-foreground": "#ffffff",
+    "--color-accent-foreground": "#ffffff",
+    "--border": border,
+    "--color-border": border,
+    "--input": border,
+    "--color-input": border,
+    "--ring": t.primary,
+    "--color-ring": t.primary,
     "--font-display": `"${t.fontDisplay}", Georgia, serif`,
     "--font-sans": `"${t.fontBody}", ui-sans-serif, system-ui, sans-serif`,
+    "--hero-gradient": [
+      `radial-gradient(circle at 15% 10%, ${mix(t.accent, "transparent", 35)}, transparent 45%)`,
+      `radial-gradient(circle at 85% 0%, ${mix(t.primary, "transparent", 22)}, transparent 40%)`,
+      `linear-gradient(180deg, ${t.background}, ${mix(t.primary, t.background, 7)})`,
+    ].join(", "),
+  };
+
+  return {
+    ...vars,
     fontFamily: `"${t.fontBody}", ui-sans-serif, system-ui, sans-serif`,
   } as CSSProperties;
 }
+
