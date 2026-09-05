@@ -1,109 +1,164 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createHmac, timingSafeEqual } from "crypto";
 
 /**
- * Webhook do Mercado Pago (IPN / Webhooks API).
- * Recebe notificações de mudança de status de pagamento e marca o pedido como
- * pago quando o pagamento for aprovado.
+ * Webhook do Mercado Pago.
  *
- * O Mercado Pago envia `data.id` (ID do pagamento) — no body (webhooks JSON)
- * ou na query string (IPN). Buscamos o pagamento na API do MP para confirmar.
+ * O status não é confiado ao navegador.
+ * Quando recebemos uma notificação, consultamos novamente a API do Mercado Pago
+ * antes de alterar o pedido.
  */
 
-const PAID_STATUSES = new Set(["approved"]);
-
-export const Route = createFileRoute("/api/public/mercadopago-webhook")({
+export const Route = createFileRoute(
+  "/api/public/mercadopago-webhook",
+)({
   server: {
     handlers: {
-      POST: async ({ request }) => {
-        return handle(request);
-      },
-      GET: async ({ request }) => {
-        return handle(request);
-      },
+      POST: async ({ request }) => handle(request),
+      GET: async ({ request }) => handle(request),
     },
   },
 });
 
+type MercadoPagoPayment = {
+  id?: number;
+  status?: string;
+  external_reference?: string;
+};
+
 async function handle(request: Request): Promise<Response> {
   const accessToken = process.env["MERCADOPAGO_ACCESS_TOKEN"];
+
   if (!accessToken) {
-    return new Response("Mercado Pago não configurado", { status: 503 });
+    return new Response("Mercado Pago não configurado", {
+      status: 503,
+    });
   }
 
   let paymentId: string | null = null;
 
   try {
-    const contentType = request.headers.get("content-type") ?? "";
+    const contentType =
+      request.headers.get("content-type") ?? "";
+
     if (contentType.includes("application/json")) {
       const body = await request.json();
-      paymentId = String(body?.data?.id ?? body?.data_id ?? "") || null;
+
+      paymentId =
+        String(
+          body?.data?.id ??
+            body?.data_id ??
+            "",
+        ) || null;
     } else {
       const text = await request.text();
       const params = new URLSearchParams(text);
+
       paymentId =
-        params.get("data.id") || params.get("data_id") || params.get("id");
+        params.get("data.id") ||
+        params.get("data_id") ||
+        params.get("id");
     }
   } catch {
-    // ignore parse errors
+    // Tentaremos obter o ID pela query string abaixo.
   }
 
-  // Fallback: IPN via query string
   if (!paymentId) {
     const url = new URL(request.url);
-    paymentId = url.searchParams.get("data.id") || url.searchParams.get("id");
+
+    paymentId =
+      url.searchParams.get("data.id") ||
+      url.searchParams.get("id");
   }
 
   if (!paymentId || paymentId === "null") {
-    // Acknowledge so MP stops retrying
     return new Response("ok", { status: 200 });
   }
 
-  // Buscar o pagamento na API do Mercado Pago para confirmar o status
-  let payment: {
-    status?: string;
-    external_reference?: string;
-  } | null = null;
+  let payment: MercadoPagoPayment | null = null;
 
   try {
-    const res = await fetch(
-      `https://api.mercadopago.com/v1/payments/${paymentId}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
+    const response = await fetch(
+      `https://api.mercadopago.com/v1/payments/${encodeURIComponent(
+        paymentId,
+      )}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
     );
-    if (res.ok) payment = await res.json();
+
+    if (!response.ok) {
+      // Retornamos erro para permitir nova tentativa do Mercado Pago.
+      return new Response("error", { status: 500 });
+    }
+
+    payment =
+      (await response.json()) as MercadoPagoPayment;
   } catch {
-    // network error — let MP retry
     return new Response("error", { status: 500 });
   }
 
-  if (!payment || !payment.external_reference) {
+  if (!payment?.id || !payment.external_reference) {
     return new Response("ok", { status: 200 });
   }
 
-  const orderId = payment.external_reference;
-  const isPaid = PAID_STATUSES.has(payment.status ?? "");
+  const { supabaseAdmin } = await import(
+    "@/integrations/supabase/client.server"
+  );
 
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-  if (isPaid) {
-    // Marcar pedido como pago (idempotente)
-    const { data: order } = await supabaseAdmin
+  const { data: order, error: orderError } =
+    await supabaseAdmin
       .from("orders")
-      .select("id, status")
-      .eq("id", orderId)
+      .select("id, status, mp_payment_id")
+      .eq("id", payment.external_reference)
       .maybeSingle();
 
-    if (order && order.status !== "paid") {
-      await supabaseAdmin
-        .from("orders")
-        .update({ status: "paid", paid_at: new Date().toISOString() })
-        .eq("id", orderId);
+  if (orderError) {
+    return new Response("error", { status: 500 });
+  }
+
+  if (!order) {
+    return new Response("ok", { status: 200 });
+  }
+
+  /**
+   * Segurança adicional:
+   * se o pedido já possui um pagamento MP associado, a notificação precisa
+   * ser daquele mesmo pagamento.
+   */
+  if (
+    order.mp_payment_id !== null &&
+    order.mp_payment_id !== payment.id
+  ) {
+    return new Response("ok", { status: 200 });
+  }
+
+  /**
+   * Só aqui o pedido é marcado definitivamente como pago.
+   *
+   * O trigger sync_gift_count existente no banco será executado quando
+   * status mudar para paid e atualizará purchased_count.
+   */
+  if (
+    payment.status === "approved" &&
+    order.status !== "paid"
+  ) {
+    const { error } = await supabaseAdmin
+      .from("orders")
+      .update({
+        mp_payment_id: payment.id,
+        provider: "mercadopago",
+        status: "paid",
+        paid_at: new Date().toISOString(),
+      })
+      .eq("id", order.id)
+      .neq("status", "paid");
+
+    if (error) {
+      return new Response("error", { status: 500 });
     }
   }
 
   return new Response("ok", { status: 200 });
 }
-
-// Referência para silenciar import não usado em alguns bundlers
-void createHmac;
-void timingSafeEqual;
