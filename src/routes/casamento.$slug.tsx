@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/hooks/useSession";
+import { themeStyle } from "@/lib/theme";
 import { formatWeddingDate, useWedding } from "@/hooks/useWedding";
 
 export const Route = createFileRoute("/casamento/$slug")({
@@ -25,6 +26,7 @@ const PAGES = [
   { to: "/casamento/$slug/festa", label: "Cerimônia e festa" },
   { to: "/casamento/$slug/galeria", label: "Galeria" },
   { to: "/casamento/$slug/recados", label: "Recados" },
+  { to: "/casamento/$slug/fornecedores", label: "Fornecedores" },
 ] as const;
 
 function WeddingLayout() {
@@ -55,12 +57,12 @@ function WeddingLayout() {
             <div className="divider-gold mx-auto my-7 w-32" />
             <p className="text-muted-foreground">
               Para ver a nossa história, os locais da cerimônia e da festa, as fotos e a lista de
-              presentes, faça seu cadastro como convidado com e-mail, senha e CPF.
+              presentes, entre com o e-mail e a senha criados pelo seu link de convite.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Button asChild size="lg">
                 <Link to="/auth" search={{ redirect: `/casamento/${slug}` }}>
-                  Entrar ou criar conta
+                  Entrar
                 </Link>
               </Button>
             </div>
@@ -89,7 +91,7 @@ function WeddingLayout() {
   const date = formatWeddingDate(wedding.wedding_date);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" style={themeStyle(wedding)}>
       <SiteHeader />
 
       <nav className="sticky top-16 z-30 border-b border-border/70 bg-background/90 backdrop-blur">

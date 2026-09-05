@@ -21,6 +21,7 @@ import { Route as CasamentoSlugIndexRouteImport } from './routes/casamento.$slug
 import { Route as CasamentoSlugAvisosRouteImport } from './routes/casamento.$slug.avisos'
 import { Route as CasamentoSlugConfirmarRouteImport } from './routes/casamento.$slug.confirmar'
 import { Route as CasamentoSlugFestaRouteImport } from './routes/casamento.$slug.festa'
+import { Route as CasamentoSlugFornecedoresRouteImport } from './routes/casamento.$slug.fornecedores'
 import { Route as CasamentoSlugGaleriaRouteImport } from './routes/casamento.$slug.galeria'
 import { Route as CasamentoSlugHistoriaRouteImport } from './routes/casamento.$slug.historia'
 import { Route as CasamentoSlugPadrinhosRouteImport } from './routes/casamento.$slug.padrinhos'
@@ -89,6 +90,12 @@ const CasamentoSlugFestaRoute = CasamentoSlugFestaRouteImport.update({
   path: '/festa',
   getParentRoute: () => CasamentoSlugRoute,
 } as any)
+const CasamentoSlugFornecedoresRoute =
+  CasamentoSlugFornecedoresRouteImport.update({
+    id: '/fornecedores',
+    path: '/fornecedores',
+    getParentRoute: () => CasamentoSlugRoute,
+  } as any)
 const CasamentoSlugGaleriaRoute = CasamentoSlugGaleriaRouteImport.update({
   id: '/galeria',
   path: '/galeria',
@@ -132,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
   '/casamento/$slug/confirmar': typeof CasamentoSlugConfirmarRoute
   '/casamento/$slug/festa': typeof CasamentoSlugFestaRoute
+  '/casamento/$slug/fornecedores': typeof CasamentoSlugFornecedoresRoute
   '/casamento/$slug/galeria': typeof CasamentoSlugGaleriaRoute
   '/casamento/$slug/historia': typeof CasamentoSlugHistoriaRoute
   '/casamento/$slug/padrinhos': typeof CasamentoSlugPadrinhosRoute
@@ -150,6 +158,7 @@ export interface FileRoutesByTo {
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
   '/casamento/$slug/confirmar': typeof CasamentoSlugConfirmarRoute
   '/casamento/$slug/festa': typeof CasamentoSlugFestaRoute
+  '/casamento/$slug/fornecedores': typeof CasamentoSlugFornecedoresRoute
   '/casamento/$slug/galeria': typeof CasamentoSlugGaleriaRoute
   '/casamento/$slug/historia': typeof CasamentoSlugHistoriaRoute
   '/casamento/$slug/padrinhos': typeof CasamentoSlugPadrinhosRoute
@@ -171,6 +180,7 @@ export interface FileRoutesById {
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
   '/casamento/$slug/confirmar': typeof CasamentoSlugConfirmarRoute
   '/casamento/$slug/festa': typeof CasamentoSlugFestaRoute
+  '/casamento/$slug/fornecedores': typeof CasamentoSlugFornecedoresRoute
   '/casamento/$slug/galeria': typeof CasamentoSlugGaleriaRoute
   '/casamento/$slug/historia': typeof CasamentoSlugHistoriaRoute
   '/casamento/$slug/padrinhos': typeof CasamentoSlugPadrinhosRoute
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/casamento/$slug/avisos'
     | '/casamento/$slug/confirmar'
     | '/casamento/$slug/festa'
+    | '/casamento/$slug/fornecedores'
     | '/casamento/$slug/galeria'
     | '/casamento/$slug/historia'
     | '/casamento/$slug/padrinhos'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/casamento/$slug/avisos'
     | '/casamento/$slug/confirmar'
     | '/casamento/$slug/festa'
+    | '/casamento/$slug/fornecedores'
     | '/casamento/$slug/galeria'
     | '/casamento/$slug/historia'
     | '/casamento/$slug/padrinhos'
@@ -230,6 +242,7 @@ export interface FileRouteTypes {
     | '/casamento/$slug/avisos'
     | '/casamento/$slug/confirmar'
     | '/casamento/$slug/festa'
+    | '/casamento/$slug/fornecedores'
     | '/casamento/$slug/galeria'
     | '/casamento/$slug/historia'
     | '/casamento/$slug/padrinhos'
@@ -332,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CasamentoSlugFestaRouteImport
       parentRoute: typeof CasamentoSlugRoute
     }
+    '/casamento/$slug/fornecedores': {
+      id: '/casamento/$slug/fornecedores'
+      path: '/fornecedores'
+      fullPath: '/casamento/$slug/fornecedores'
+      preLoaderRoute: typeof CasamentoSlugFornecedoresRouteImport
+      parentRoute: typeof CasamentoSlugRoute
+    }
     '/casamento/$slug/galeria': {
       id: '/casamento/$slug/galeria'
       path: '/galeria'
@@ -398,6 +418,7 @@ interface CasamentoSlugRouteChildren {
   CasamentoSlugAvisosRoute: typeof CasamentoSlugAvisosRoute
   CasamentoSlugConfirmarRoute: typeof CasamentoSlugConfirmarRoute
   CasamentoSlugFestaRoute: typeof CasamentoSlugFestaRoute
+  CasamentoSlugFornecedoresRoute: typeof CasamentoSlugFornecedoresRoute
   CasamentoSlugGaleriaRoute: typeof CasamentoSlugGaleriaRoute
   CasamentoSlugHistoriaRoute: typeof CasamentoSlugHistoriaRoute
   CasamentoSlugPadrinhosRoute: typeof CasamentoSlugPadrinhosRoute
@@ -411,6 +432,7 @@ const CasamentoSlugRouteChildren: CasamentoSlugRouteChildren = {
   CasamentoSlugAvisosRoute: CasamentoSlugAvisosRoute,
   CasamentoSlugConfirmarRoute: CasamentoSlugConfirmarRoute,
   CasamentoSlugFestaRoute: CasamentoSlugFestaRoute,
+  CasamentoSlugFornecedoresRoute: CasamentoSlugFornecedoresRoute,
   CasamentoSlugGaleriaRoute: CasamentoSlugGaleriaRoute,
   CasamentoSlugHistoriaRoute: CasamentoSlugHistoriaRoute,
   CasamentoSlugPadrinhosRoute: CasamentoSlugPadrinhosRoute,

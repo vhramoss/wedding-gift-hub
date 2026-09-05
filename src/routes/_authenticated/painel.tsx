@@ -7,6 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AnnouncementsTab } from "@/components/admin/AnnouncementsTab";
 import { InviteManager } from "@/components/InviteManager";
+import { VendorDirectory } from "@/components/VendorDirectory";
+import { AppearanceTab } from "@/components/admin/AppearanceTab";
+import { FinanceTab } from "@/components/admin/FinanceTab";
 
 import { WeddingContentTab } from "@/components/admin/WeddingContentTab";
 import { WeddingPhotosTab } from "@/components/admin/WeddingPhotosTab";
@@ -300,7 +303,9 @@ function CouplePanel() {
             <TabsTrigger value="orders">Pedidos</TabsTrigger>
             <TabsTrigger value="rsvps">Confirmações</TabsTrigger>
             <TabsTrigger value="invites">Convites</TabsTrigger>
-
+            <TabsTrigger value="appearance">Aparência</TabsTrigger>
+            <TabsTrigger value="finance">Financeiro</TabsTrigger>
+            <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="mt-6">
@@ -476,6 +481,18 @@ function CouplePanel() {
               title="Convidar convidados"
               description="Gere um link e um QR Code para cada convidado criar o login e acessar o site."
             />
+          </TabsContent>
+
+          <TabsContent value="appearance" className="mt-6">
+            <AppearanceTab weddingId={weddingId} />
+          </TabsContent>
+
+          <TabsContent value="finance" className="mt-6">
+            <FinanceTab weddingId={weddingId} />
+          </TabsContent>
+
+          <TabsContent value="vendors" className="mt-6">
+            <VendorDirectory message="Olá! Somos noivos e gostaríamos de um orçamento para o nosso casamento." />
           </TabsContent>
         </Tabs>
 

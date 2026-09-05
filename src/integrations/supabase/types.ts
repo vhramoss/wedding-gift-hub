@@ -231,6 +231,54 @@ export type Database = {
         }
         Relationships: []
       }
+      vendors: {
+        Row: {
+          active: boolean
+          category: string
+          city: string | null
+          created_at: string
+          description: string | null
+          featured: boolean
+          id: string
+          logo_url: string | null
+          name: string
+          phone: string | null
+          updated_at: string
+          website_url: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          active?: boolean
+          category?: string
+          city?: string | null
+          created_at?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          updated_at?: string
+          website_url?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          city?: string | null
+          created_at?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          updated_at?: string
+          website_url?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       wedding_announcements: {
         Row: {
           body: string
@@ -259,6 +307,69 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "wedding_announcements_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wedding_expenses: {
+        Row: {
+          amount_cents: number
+          category: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          notes: string | null
+          paid_cents: number
+          pay_from_gifts: boolean
+          status: string
+          title: string
+          updated_at: string
+          vendor_id: string | null
+          wedding_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          category?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          paid_cents?: number
+          pay_from_gifts?: boolean
+          status?: string
+          title: string
+          updated_at?: string
+          vendor_id?: string | null
+          wedding_id: string
+        }
+        Update: {
+          amount_cents?: number
+          category?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          paid_cents?: number
+          pay_from_gifts?: boolean
+          status?: string
+          title?: string
+          updated_at?: string
+          vendor_id?: string | null
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_expenses_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_expenses_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
             referencedRelation: "weddings"
@@ -477,6 +588,12 @@ export type Database = {
           story_proposal: string | null
           story_text: string | null
           tagline: string | null
+          theme_accent: string | null
+          theme_background: string | null
+          theme_font_body: string | null
+          theme_font_display: string | null
+          theme_primary: string | null
+          theme_template: string
           tips: string | null
           updated_at: string
           venue: string | null
@@ -511,6 +628,12 @@ export type Database = {
           story_proposal?: string | null
           story_text?: string | null
           tagline?: string | null
+          theme_accent?: string | null
+          theme_background?: string | null
+          theme_font_body?: string | null
+          theme_font_display?: string | null
+          theme_primary?: string | null
+          theme_template?: string
           tips?: string | null
           updated_at?: string
           venue?: string | null
@@ -545,6 +668,12 @@ export type Database = {
           story_proposal?: string | null
           story_text?: string | null
           tagline?: string | null
+          theme_accent?: string | null
+          theme_background?: string | null
+          theme_font_body?: string | null
+          theme_font_display?: string | null
+          theme_primary?: string | null
+          theme_template?: string
           tips?: string | null
           updated_at?: string
           venue?: string | null

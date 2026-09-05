@@ -7,6 +7,8 @@ import { ExternalLink, Percent, ShieldCheck, Trash2, Unlink, UserPlus } from "lu
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
 import { InviteManager } from "@/components/InviteManager";
+import { VendorsAdminTab } from "@/components/admin/VendorsAdminTab";
+import { AccountsByWeddingTab } from "@/components/admin/AccountsByWeddingTab";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -241,8 +243,10 @@ function SuperAdminPage() {
           <TabsList>
             <TabsTrigger value="weddings">Casamentos</TabsTrigger>
             <TabsTrigger value="commissions">Comissões</TabsTrigger>
+            <TabsTrigger value="accounts">Contas por casamento</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
             <TabsTrigger value="invites">Convites</TabsTrigger>
+            <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
           </TabsList>
 
           <TabsContent value="weddings" className="mt-6 space-y-4">
@@ -414,6 +418,10 @@ function SuperAdminPage() {
             })}
           </TabsContent>
 
+          <TabsContent value="accounts" className="mt-6">
+            <AccountsByWeddingTab />
+          </TabsContent>
+
           <TabsContent value="users" className="mt-6 space-y-3">
             {users.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhum usuário cadastrado ainda.</p>
@@ -463,6 +471,10 @@ function SuperAdminPage() {
               roles={["owner", "guest"]}
               description="Perfil noivos libera a área de edição; perfil convidado libera a navegação e a lista de presentes."
             />
+          </TabsContent>
+
+          <TabsContent value="vendors" className="mt-6">
+            <VendorsAdminTab />
           </TabsContent>
         </Tabs>
       </div>
