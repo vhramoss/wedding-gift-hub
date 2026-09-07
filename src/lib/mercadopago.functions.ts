@@ -84,10 +84,21 @@ async function mpCreatePayment(
 
 /** Configuração pública repassada ao navegador (public key + status). */
 export const getMercadoPagoConfig = createServerFn({ method: "GET" }).handler(
-  async () => ({
-    enabled: enabled(),
-    publicKey: process.env["MERCADOPAGO_PUBLIC_KEY"] ?? "",
-  }),
+  async () => {
+    // TEMP DEBUG — remover depois de confirmar que o token em produção é o
+    // esperado. Não expõe o token inteiro, só um "fingerprint" pra comparar
+    // com o que está no painel do Mercado Pago sem vazar o segredo.
+    const token = process.env["MERCADOPAGO_ACCESS_TOKEN"] ?? "";
+    const accessTokenFingerprint = token
+      ? `${token.slice(0, 8)}...${token.slice(-4)} (len=${token.length})`
+      : "(vazio)";
+
+    return {
+      enabled: enabled(),
+      publicKey: process.env["MERCADOPAGO_PUBLIC_KEY"] ?? "",
+      accessTokenFingerprint,
+    };
+  },
 );
 
 /**

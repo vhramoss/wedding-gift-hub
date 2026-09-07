@@ -604,6 +604,12 @@ function CheckoutPage() {
               <ShieldCheck className="size-4" />
               Pagamento processado pelo Mercado Pago. Seus dados ficam protegidos.
             </p>
+            {/* TEMP DEBUG — remover depois de confirmar o token em produção */}
+            {mpConfig.data && "accessTokenFingerprint" in mpConfig.data ? (
+              <p className="rounded border border-dashed p-2 font-mono text-[10px] text-muted-foreground">
+                DEBUG token: {(mpConfig.data as { accessTokenFingerprint?: string }).accessTokenFingerprint}
+              </p>
+            ) : null}
           </CardContent>
         </Card>
       </aside>
