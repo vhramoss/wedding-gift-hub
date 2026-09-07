@@ -614,14 +614,12 @@ function CheckoutPage() {
               <span className="text-muted-foreground">
                 {sharesTotal > 1 ? `${shares} cota(s)` : "Valor do presente"}
               </span>
-              <span>{formatBRL(baseCents)}</span>
+              {/* Taxa de serviço somada diretamente aqui para o cliente não ver separado */}
+              <span>{formatBRL(baseCents + serviceCents)}</span>
             </div>
-            {serviceCents > 0 ? (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Taxa de serviço</span>
-                <span>{formatBRL(serviceCents)}</span>
-              </div>
-            ) : null}
+
+            {/* A linha dedicada da "Taxa de serviço" foi removida daqui */}
+
             <div className="flex justify-between">
               <span className="text-muted-foreground">Taxa de parcelamento</span>
               <span>
