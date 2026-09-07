@@ -263,10 +263,10 @@ function CheckoutPage() {
 
   if (!mpEnabled && phase === "form") {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-16">
+      <div className="payment-ui mx-auto max-w-2xl px-4 py-16">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="font-display text-2xl">Pagamento indisponível</CardTitle>
+            <CardTitle className="text-2xl font-semibold">Pagamento indisponível</CardTitle>
             <CardDescription>
               O pagamento online ainda não foi ativado pelo administrador do site.
               Entre em contato para finalizar este presente.
@@ -285,10 +285,10 @@ function CheckoutPage() {
   // ---------- Tela Pix ----------
   if (phase === "pix" && pixData) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-16">
+      <div className="payment-ui mx-auto max-w-2xl px-4 py-16">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-display text-2xl">
+            <CardTitle className="flex items-center gap-2 text-2xl font-semibold">
               <QrCode className="size-5 text-accent" /> Pague com Pix
             </CardTitle>
             <CardDescription>
@@ -358,10 +358,10 @@ function CheckoutPage() {
   // ---------- Tela Cartão (brick do Mercado Pago) ----------
   if (phase === "card" && cardOrder) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-16">
+      <div className="payment-ui mx-auto max-w-2xl px-4 py-16">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-display text-2xl">
+            <CardTitle className="flex items-center gap-2 text-2xl font-semibold">
               <CreditCard className="size-5 text-accent" />
               {method === "debit" ? "Pagar com débito" : "Pagar com crédito"}
             </CardTitle>
@@ -422,7 +422,7 @@ function CheckoutPage() {
     const isPaid = cardResult.status === "paid";
     const isPending = cardResult.status === "pending";
     return (
-      <div className="mx-auto max-w-2xl px-4 py-16">
+      <div className="payment-ui mx-auto max-w-2xl px-4 py-16">
         <Card className="shadow-card text-center">
           <CardContent className="flex flex-col items-center gap-4 py-12">
             {isPaid ? (
@@ -432,7 +432,7 @@ function CheckoutPage() {
             ) : (
               <XCircle className="size-16 text-destructive" />
             )}
-            <h2 className="font-display text-2xl">
+            <h2 className="text-2xl font-semibold">
               {isPaid
                 ? "Pagamento aprovado!"
                 : isPending
@@ -457,7 +457,7 @@ function CheckoutPage() {
 
   // ---------- Formulário inicial ----------
   return (
-    <div className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:gap-8 sm:py-12 lg:grid-cols-[1fr_360px]">
+    <div className="payment-ui mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:gap-8 sm:py-12 lg:grid-cols-[1fr_360px]">
       <div className="space-y-6">
         <div>
           <Link
@@ -467,7 +467,7 @@ function CheckoutPage() {
           >
             ← Voltar para a lista
           </Link>
-          <h1 className="mt-3 font-display text-3xl sm:text-4xl">Finalizar presente</h1>
+          <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">Finalizar presente</h1>
         </div>
 
         <Card className="shadow-card">

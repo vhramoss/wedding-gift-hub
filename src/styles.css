@@ -188,3 +188,15 @@
   );
 }
 
+/* A etapa financeira mantém tipografia sóbria, mesmo em temas decorativos. */
+.payment-ui,
+.payment-ui h1,
+.payment-ui h2,
+.payment-ui h3,
+.payment-ui button,
+.payment-ui input,
+.payment-ui select,
+.payment-ui textarea {
+  font-family: "Lato", ui-sans-serif, system-ui, sans-serif;
+}
+
