@@ -93,10 +93,24 @@ function GiftsPage() {
             const sharesTotal = Math.max(1, gift.shares_total ?? 1);
             const sharesLeft = Math.max(0, sharesTotal - gift.purchased_count);
             const sharePrice = Math.ceil(gift.price_cents / sharesTotal);
+
+            
+            // Calcula o preço base da cota ou do item inteiro
+            const rawPrice = sharesTotal > 1 ? sharePrice : gift.price_cents;
+            const commissionPercent = Number(wedding?.commission_percent ?? 0);
+              const serviceCents =
+                wedding?.commission_paid_by === "guest"
+                  ? Math.max(0, Math.round((rawPrice * commissionPercent) / 100))
+                  : 0;
+
+              // Preço total com a taxa embutida para a vitrine
+              const totalPriceWithFee = rawPrice + serviceCents;
+
             const soldOut =
               sharesTotal > 1
                 ? sharesLeft === 0
                 : gift.quantity > 0 && gift.purchased_count >= gift.quantity;
+
             return (
               <Card key={gift.id} className="shadow-card overflow-hidden border-border/70 pt-0">
                 <div className="h-48 w-full bg-secondary/60">
@@ -123,12 +137,16 @@ function GiftsPage() {
                   {gift.description ? (
                     <p className="text-sm text-muted-foreground">{gift.description}</p>
                   ) : null}
+                  
+                  {/* Aqui exibe o preço já com a taxa embutida para o convidado ver na vitrine */}
                   <p className="mt-1 font-display text-3xl text-primary">
-                    {formatBRL(sharesTotal > 1 ? sharePrice : gift.price_cents)}
+                    {formatBRL(totalPriceWithFee)}
                   </p>
+
                   {sharesTotal > 1 ? (
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">
+                        {/* Se quiser mostrar o valor original líquido em letras miúdas na legenda, opcional: */}
                         Por cota · {formatBRL(gift.price_cents)} no total ·{" "}
                         {sharesTotal - sharesLeft} de {sharesTotal} cotas presenteadas
                       </p>
