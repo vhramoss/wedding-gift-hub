@@ -96,16 +96,40 @@ async function handle(request: Request): Promise<Response> {
   }
 
   // Buscar o pagamento na API do Mercado Pago para confirmar o status real.
+  // Em pagamentos com split, a consulta usa o token da conta dos noivos
+  // (o id do casamento vem na query `w` da URL de notificação).
   let payment: { status?: string; external_reference?: string } | null = null;
+  const weddingId = new URL(request.url).searchParams.get("w");
 
-  try {
-    const res = await fetch(
-      `https://api.mercadopago.com/v1/payments/${paymentId}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-    );
-    if (res.ok) payment = await res.json();
-  } catch {
-    return new Response("error", { status: 500 });
+  const tokens: string[] = [];
+  if (weddingId && confirmSecret) {
+    try {
+      const supabase = makePublishableClient();
+      const { data: rows } = await supabase.rpc("get_wedding_mp_credentials", {
+        p_wedding_id: weddingId,
+        p_secret: confirmSecret,
+      });
+      const sellerToken = (rows ?? [])[0]?.access_token;
+      if (sellerToken) tokens.push(sellerToken);
+    } catch {
+      // segue com o token da plataforma
+    }
+  }
+  tokens.push(accessToken);
+
+  for (const token of tokens) {
+    try {
+      const res = await fetch(
+        `https://api.mercadopago.com/v1/payments/${paymentId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (res.ok) {
+        payment = await res.json();
+        break;
+      }
+    } catch {
+      // tenta o próximo token
+    }
   }
 
   if (!payment || !payment.external_reference) {

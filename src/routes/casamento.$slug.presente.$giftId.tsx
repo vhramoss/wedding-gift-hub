@@ -90,14 +90,6 @@ function CheckoutPage() {
   const [cardResult, setCardResult] = useState<PayResult | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const mpConfig = useQuery({
-    queryKey: ["mp-config"],
-    queryFn: () => getMercadoPagoConfig(),
-    retry: 1,
-  });
-  const mpEnabled = Boolean(mpConfig.data?.enabled);
-  const mpPublicKey = mpConfig.data?.publicKey ?? "";
-
   const newOrder = useServerFn(createGiftOrder);
   const createPix = useServerFn(createPixPayment);
   const processCard = useServerFn(processCardPayment);
@@ -128,6 +120,18 @@ function CheckoutPage() {
 
   const gift = giftQuery.data;
   const wedding = gift?.weddings;
+
+  const mpConfig = useQuery({
+    queryKey: ["mp-config", gift?.wedding_id ?? null],
+    queryFn: () =>
+      getMercadoPagoConfig({
+        data: gift?.wedding_id ? { weddingId: gift.wedding_id } : {},
+      }),
+    retry: 1,
+  });
+  const mpEnabled = Boolean(mpConfig.data?.enabled);
+  const mpPublicKey = mpConfig.data?.publicKey ?? "";
+
 
   const charge = useMemo(
     () => computeCharge(gift?.price_cents ?? 0, method, installments),

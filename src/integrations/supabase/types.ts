@@ -85,6 +85,7 @@ export type Database = {
       orders: {
         Row: {
           amount_cents: number
+          application_fee_cents: number
           commission_cents: number
           created_at: string
           fee_cents: number
@@ -100,6 +101,7 @@ export type Database = {
           pix_payload: string | null
           pix_qr_base64: string | null
           provider: string
+          seller_mp_user_id: number | null
           status: string
           total_cents: number
           updated_at: string
@@ -108,6 +110,7 @@ export type Database = {
         }
         Insert: {
           amount_cents: number
+          application_fee_cents?: number
           commission_cents?: number
           created_at?: string
           fee_cents?: number
@@ -123,6 +126,7 @@ export type Database = {
           pix_payload?: string | null
           pix_qr_base64?: string | null
           provider?: string
+          seller_mp_user_id?: number | null
           status?: string
           total_cents: number
           updated_at?: string
@@ -131,6 +135,7 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          application_fee_cents?: number
           commission_cents?: number
           created_at?: string
           fee_cents?: number
@@ -146,6 +151,7 @@ export type Database = {
           pix_payload?: string | null
           pix_qr_base64?: string | null
           provider?: string
+          seller_mp_user_id?: number | null
           status?: string
           total_cents?: number
           updated_at?: string
@@ -507,6 +513,56 @@ export type Database = {
           },
         ]
       }
+      wedding_payment_accounts: {
+        Row: {
+          access_token: string
+          connected_by: string | null
+          created_at: string
+          expires_at: string | null
+          live_mode: boolean
+          mp_user_id: number | null
+          provider: string
+          public_key: string | null
+          refresh_token: string | null
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          access_token: string
+          connected_by?: string | null
+          created_at?: string
+          expires_at?: string | null
+          live_mode?: boolean
+          mp_user_id?: number | null
+          provider?: string
+          public_key?: string | null
+          refresh_token?: string | null
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          access_token?: string
+          connected_by?: string | null
+          created_at?: string
+          expires_at?: string | null
+          live_mode?: boolean
+          mp_user_id?: number | null
+          provider?: string
+          public_key?: string | null
+          refresh_token?: string | null
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_payment_accounts_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wedding_people: {
         Row: {
           created_at: string
@@ -757,6 +813,20 @@ export type Database = {
           total_cents: number
         }[]
       }
+      disconnect_wedding_mp: {
+        Args: { _wedding_id: string }
+        Returns: undefined
+      }
+      get_wedding_mp_credentials: {
+        Args: { p_secret: string; p_wedding_id: string }
+        Returns: {
+          access_token: string
+          expires_at: string
+          live_mode: boolean
+          mp_user_id: number
+          refresh_token: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -766,6 +836,15 @@ export type Database = {
       }
       order_confirm_secret_is_set: { Args: never; Returns: boolean }
       owns_wedding: { Args: { _wedding_id: string }; Returns: boolean }
+      record_order_split: {
+        Args: {
+          p_application_fee_cents: number
+          p_order_id: string
+          p_secret: string
+          p_seller_mp_user_id: number
+        }
+        Returns: undefined
+      }
       record_pix_payment: {
         Args: {
           p_mp_payment_id: number
@@ -780,9 +859,54 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_role"]
       }
       rsvp_open: { Args: { _wedding_id: string }; Returns: boolean }
+      save_wedding_mp_account: {
+        Args: {
+          p_access_token: string
+          p_connected_by: string
+          p_expires_at: string
+          p_live_mode: boolean
+          p_mp_user_id: number
+          p_public_key: string
+          p_refresh_token: string
+          p_secret: string
+          p_wedding_id: string
+        }
+        Returns: undefined
+      }
       set_order_confirm_secret: {
         Args: { p_secret: string }
         Returns: undefined
+      }
+      wedding_donors: {
+        Args: { _wedding_id: string }
+        Returns: {
+          amount_cents: number
+          created_at: string
+          gift_name: string
+          guest_email: string
+          guest_name: string
+          guest_phone: string
+          installments: number
+          message: string
+          order_id: string
+          paid_at: string
+          payment_method: string
+          status: string
+          total_cents: number
+        }[]
+      }
+      wedding_payment_public_key: {
+        Args: { _wedding_id: string }
+        Returns: string
+      }
+      wedding_payment_status: {
+        Args: { _wedding_id: string }
+        Returns: {
+          connected: boolean
+          connected_at: string
+          live_mode: boolean
+          mp_user_id: number
+        }[]
       }
     }
     Enums: {

@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PaymentAccountTab } from "@/components/painel/PaymentAccountTab";
 import { useSession } from "@/hooks/useSession";
 import { useMyRoles } from "@/hooks/useRoles";
 import { useMyWedding } from "@/hooks/useMyWedding";
@@ -89,6 +90,18 @@ function CouplePanel() {
         .select("*, gifts(name)")
         .eq("wedding_id", weddingId!)
         .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const donorsQuery = useQuery({
+    queryKey: ["panel", "donors", weddingId],
+    enabled: Boolean(weddingId),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("wedding_donors", {
+        _wedding_id: weddingId!,
+      });
       if (error) throw error;
       return data;
     },
@@ -305,6 +318,7 @@ function CouplePanel() {
             <TabsTrigger value="invites">Convites</TabsTrigger>
             <TabsTrigger value="appearance">Aparência</TabsTrigger>
             <TabsTrigger value="finance">Financeiro</TabsTrigger>
+            <TabsTrigger value="payments">Recebimento</TabsTrigger>
             <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
           </TabsList>
 
@@ -402,6 +416,52 @@ function CouplePanel() {
                 <span className="text-2xl font-medium text-primary sm:text-3xl">{formatBRL(totalPaid)}</span>
               </CardContent>
             </Card>
+
+            <Card className="shadow-card">
+              <CardContent className="space-y-4">
+                <h3 className="text-lg font-medium">Quem presenteou</h3>
+                {(donorsQuery.data ?? []).filter((d) => d.status === "paid").length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum presente pago ainda.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {(donorsQuery.data ?? [])
+                      .filter((d) => d.status === "paid")
+                      .map((d) => (
+                        <div
+                          key={d.order_id}
+                          className="flex flex-wrap items-start justify-between gap-3 rounded-lg border p-3"
+                        >
+                          <div>
+                            <p className="font-medium">{d.guest_name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Presenteou: {d.gift_name ?? "Presente"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {[d.guest_email, d.guest_phone].filter(Boolean).join(" · ")}
+                            </p>
+                            {d.message ? (
+                              <p className="mt-1 text-sm italic text-muted-foreground">
+                                “{d.message}”
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-primary">{formatBRL(d.amount_cents)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {d.paid_at
+                                ? new Date(d.paid_at).toLocaleDateString("pt-BR")
+                                : new Date(d.created_at).toLocaleDateString("pt-BR")}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {(ordersQuery.data ?? []).map((order) => (
               <Card key={order.id}>
                 <CardContent className="flex flex-wrap items-center justify-between gap-4">
@@ -489,6 +549,10 @@ function CouplePanel() {
 
           <TabsContent value="finance" className="mt-6">
             <FinanceTab weddingId={weddingId} />
+          </TabsContent>
+
+          <TabsContent value="payments" className="mt-6">
+            <PaymentAccountTab weddingId={weddingId} />
           </TabsContent>
 
           <TabsContent value="vendors" className="mt-6">

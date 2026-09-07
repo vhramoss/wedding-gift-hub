@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedConectarPagamentoRouteImport } from './routes/_authenticated/conectar-pagamento'
 import { Route as AuthenticatedMeusPresentesRouteImport } from './routes/_authenticated/meus-presentes'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedSuperAdminRouteImport } from './routes/_authenticated/super-admin'
@@ -44,6 +45,12 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedConectarPagamentoRoute =
+  AuthenticatedConectarPagamentoRouteImport.update({
+    id: '/conectar-pagamento',
+    path: '/conectar-pagamento',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedMeusPresentesRoute =
   AuthenticatedMeusPresentesRouteImport.update({
     id: '/meus-presentes',
@@ -138,6 +145,7 @@ const CasamentoSlugPresenteGiftIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/conectar-pagamento': typeof AuthenticatedConectarPagamentoRoute
   '/meus-presentes': typeof AuthenticatedMeusPresentesRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/super-admin': typeof AuthenticatedSuperAdminRoute
@@ -159,6 +167,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/conectar-pagamento': typeof AuthenticatedConectarPagamentoRoute
   '/meus-presentes': typeof AuthenticatedMeusPresentesRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/super-admin': typeof AuthenticatedSuperAdminRoute
@@ -181,6 +190,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/conectar-pagamento': typeof AuthenticatedConectarPagamentoRoute
   '/_authenticated/meus-presentes': typeof AuthenticatedMeusPresentesRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/super-admin': typeof AuthenticatedSuperAdminRoute
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/conectar-pagamento'
     | '/meus-presentes'
     | '/painel'
     | '/super-admin'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/conectar-pagamento'
     | '/meus-presentes'
     | '/painel'
     | '/super-admin'
@@ -246,6 +258,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/conectar-pagamento'
     | '/_authenticated/meus-presentes'
     | '/_authenticated/painel'
     | '/_authenticated/super-admin'
@@ -295,6 +308,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/conectar-pagamento': {
+      id: '/_authenticated/conectar-pagamento'
+      path: '/conectar-pagamento'
+      fullPath: '/conectar-pagamento'
+      preLoaderRoute: typeof AuthenticatedConectarPagamentoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/meus-presentes': {
       id: '/_authenticated/meus-presentes'
@@ -419,6 +439,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedConectarPagamentoRoute: typeof AuthenticatedConectarPagamentoRoute
   AuthenticatedMeusPresentesRoute: typeof AuthenticatedMeusPresentesRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedSuperAdminRoute: typeof AuthenticatedSuperAdminRoute
@@ -426,6 +447,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedConectarPagamentoRoute: AuthenticatedConectarPagamentoRoute,
   AuthenticatedMeusPresentesRoute: AuthenticatedMeusPresentesRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedSuperAdminRoute: AuthenticatedSuperAdminRoute,

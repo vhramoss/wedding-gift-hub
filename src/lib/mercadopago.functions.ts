@@ -2,16 +2,16 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { PaymentMethod } from "@/lib/br";
 
 /**
- * Integração de pagamento real com o Mercado Pago (dono do site = intermediador).
+ * Integração de pagamento real com o Mercado Pago.
  *
- * Refatorado para NÃO usar a SUPABASE_SERVICE_ROLE_KEY:
- *  - createGiftOrder -> RPC create_gift_order (valores derivados no banco)
- *  - createPixPayment -> RPC record_pix_payment (guarda QR + comissão)
- *  - processCardPayment -> chama MP e confirma via RPC confirm_order_payment
- *  - webhook -> RPC confirm_order_payment (segredo do super-admin)
+ * Modelo marketplace (split de pagamento):
+ *  - Se o casamento tem conta Mercado Pago conectada, a cobrança é criada com o
+ *    token DOS NOIVOS e `application_fee` = comissão da plataforma. O Mercado
+ *    Pago divide na liquidação: líquido -> conta dos noivos, comissão -> conta
+ *    da plataforma. O dinheiro dos noivos nunca entra no caixa da plataforma.
+ *  - Sem conta conectada, cai no modo antigo (tudo na conta da plataforma).
  *
  * Regras de segurança:
  *  - O navegador NUNCA envia valores. Só giftId, método, parcelas e recado.
@@ -38,7 +38,7 @@ function enabled(): boolean {
   );
 }
 
-function webhookUrl(): string {
+function webhookUrl(weddingId?: string): string {
   const req = getRequest();
   const headers = req?.headers ?? new Headers();
   const host =
@@ -51,13 +51,14 @@ function webhookUrl(): string {
   const proto =
     headers.get("x-forwarded-proto") ||
     (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}/api/public/mercadopago-webhook`;
+  const base = `${proto}://${host}/api/public/mercadopago-webhook`;
+  return weddingId ? `${base}?w=${weddingId}` : base;
 }
 
 async function mpCreatePayment(
   body: Record<string, unknown>,
+  accessToken: string,
 ): Promise<MpPaymentResponse> {
-  const accessToken = process.env["MERCADOPAGO_ACCESS_TOKEN"]!;
   const idempotency = crypto.randomUUID();
   const res = await fetch("https://api.mercadopago.com/v1/payments", {
     method: "POST",
@@ -82,13 +83,158 @@ async function mpCreatePayment(
   return data;
 }
 
+/**
+ * Resolve qual conta recebe o pagamento.
+ * Retorna o token da conta dos noivos (split) ou o da plataforma (fallback).
+ */
+async function resolveCollector(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  weddingId: string,
+  totalCents: number,
+): Promise<{
+  accessToken: string;
+  split: boolean;
+  applicationFeeCents: number;
+  sellerMpUserId: number | null;
+}> {
+  const platform = {
+    accessToken: process.env["MERCADOPAGO_ACCESS_TOKEN"]!,
+    split: false,
+    applicationFeeCents: 0,
+    sellerMpUserId: null as number | null,
+  };
+  const secret = process.env["ORDER_CONFIRM_SECRET"];
+  if (!secret) return platform;
+
+  const { data: rows, error } = await supabase.rpc("get_wedding_mp_credentials", {
+    p_wedding_id: weddingId,
+    p_secret: secret,
+  });
+  if (error) return platform;
+  const cred = (rows ?? [])[0] as
+    | {
+        mp_user_id: number | null;
+        access_token: string;
+        refresh_token: string | null;
+        expires_at: string | null;
+      }
+    | undefined;
+  if (!cred?.access_token) return platform;
+
+  let accessToken = cred.access_token;
+
+  // Renova o token se estiver expirado (ou perto disso).
+  const expiresAt = cred.expires_at ? new Date(cred.expires_at).getTime() : 0;
+  if (cred.refresh_token && expiresAt && expiresAt - Date.now() < 60_000) {
+    try {
+      const { refreshSellerToken } = await import("@/lib/mp-oauth.server");
+      const fresh = await refreshSellerToken(cred.refresh_token);
+      accessToken = fresh.access_token!;
+      await supabase.rpc("save_wedding_mp_account", {
+        p_wedding_id: weddingId,
+        p_mp_user_id: (fresh.user_id ?? cred.mp_user_id ?? null) as number,
+        p_access_token: fresh.access_token!,
+        p_refresh_token: fresh.refresh_token ?? "",
+        p_public_key: fresh.public_key ?? "",
+        p_expires_at: (fresh.expires_in
+          ? new Date(Date.now() + fresh.expires_in * 1000).toISOString()
+          : null) as string,
+        p_live_mode: fresh.live_mode ?? true,
+        p_connected_by: null as unknown as string,
+        p_secret: secret,
+      });
+    } catch {
+      // segue com o token atual; se falhar, o MP devolverá erro claro
+    }
+  }
+
+  // Comissão da plataforma definida por casamento.
+  const { data: wedding } = await supabase
+    .from("weddings")
+    .select("commission_percent")
+    .eq("id", weddingId)
+    .maybeSingle();
+  const pct = Number(wedding?.commission_percent ?? 0);
+  const fee = Math.max(0, Math.round((totalCents * pct) / 100));
+
+  return {
+    accessToken,
+    split: true,
+    applicationFeeCents: fee,
+    sellerMpUserId: cred.mp_user_id ?? null,
+  };
+}
+
+async function recordSplit(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  orderId: string,
+  applicationFeeCents: number,
+  sellerMpUserId: number | null,
+) {
+  const secret = process.env["ORDER_CONFIRM_SECRET"];
+  if (!secret) return;
+  try {
+    await supabase.rpc("record_order_split", {
+      p_order_id: orderId,
+      p_application_fee_cents: applicationFeeCents,
+      p_seller_mp_user_id: sellerMpUserId as number,
+      p_secret: secret,
+    });
+  } catch {
+    console.error("record_order_split falhou");
+  }
+}
+
 /** Configuração pública repassada ao navegador (public key + status). */
-export const getMercadoPagoConfig = createServerFn({ method: "GET" }).handler(
-  async () => ({
-    enabled: enabled(),
-    publicKey: process.env["MERCADOPAGO_PUBLIC_KEY"] ?? "",
-  }),
-);
+export const getMercadoPagoConfig = createServerFn({ method: "POST" })
+  .inputValidator((data) =>
+    z
+      .object({ weddingId: z.string().uuid().optional() })
+      .optional()
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data }) => {
+    const platformKey = process.env["MERCADOPAGO_PUBLIC_KEY"] ?? "";
+    let publicKey = platformKey;
+    let split = false;
+
+    if (data?.weddingId) {
+      try {
+        const { createClient } = await import("@supabase/supabase-js");
+        const url = process.env["SUPABASE_URL"];
+        const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+        if (url && key) {
+          const client = createClient(url, key, {
+            auth: { persistSession: false },
+            global: {
+              fetch: (input, init) => {
+                const h = new Headers(init?.headers);
+                if (h.get("Authorization") === `Bearer ${key}`) {
+                  h.delete("Authorization");
+                }
+                h.set("apikey", key);
+                return fetch(input, { ...init, headers: h });
+              },
+            },
+          });
+          const { data: sellerKey } = await client.rpc(
+            "wedding_payment_public_key",
+            { _wedding_id: data.weddingId },
+          );
+          if (sellerKey) {
+            publicKey = sellerKey as string;
+            split = true;
+          }
+        }
+      } catch {
+        // mantém a chave da plataforma
+      }
+    }
+
+    return { enabled: enabled(), publicKey, split };
+  });
 
 /**
  * Cria o pedido pendente no servidor, via função do banco. O navegador não envia
@@ -152,17 +298,31 @@ export const createPixPayment = createServerFn({ method: "POST" })
     if (order.payment_method !== "pix") throw new Error("Pedido não é Pix.");
     if (order.status !== "pending") throw new Error("Pedido não está pendente.");
 
-    const payment = await mpCreatePayment({
-      transaction_amount: order.total_cents / 100,
-      description: `Presente: ${order.gifts?.name ?? "Lista de presentes"}`,
-      payment_method_id: "pix",
-      payer: {
-        email: claims.email ?? "convidado@lista-presentes.com",
-        first_name: "Convidado",
+    const collector = await resolveCollector(
+      supabase,
+      order.wedding_id,
+      order.total_cents,
+    );
+
+    const payment = await mpCreatePayment(
+      {
+        transaction_amount: order.total_cents / 100,
+        description: `Presente: ${order.gifts?.name ?? "Lista de presentes"}`,
+        payment_method_id: "pix",
+        payer: {
+          email: claims.email ?? "convidado@lista-presentes.com",
+          first_name: "Convidado",
+        },
+        external_reference: order.id,
+        ...(collector.split && collector.applicationFeeCents > 0
+          ? { application_fee: collector.applicationFeeCents / 100 }
+          : {}),
+        ...(webhookUrl() 
+          ? { notification_url: webhookUrl(collector.split ? order.wedding_id : undefined) }
+          : {}),
       },
-      external_reference: order.id,
-      ...(webhookUrl() ? { notification_url: webhookUrl() } : {}),
-    });
+      collector.accessToken,
+    );
 
     const qrCode = payment.point_of_interaction?.transaction_data?.qr_code ?? "";
     const qrCodeBase64 =
@@ -175,6 +335,15 @@ export const createPixPayment = createServerFn({ method: "POST" })
       p_qr_base64: qrCodeBase64,
     });
     if (rpcError) throw rpcError;
+
+    if (collector.split) {
+      await recordSplit(
+        supabase,
+        order.id,
+        collector.applicationFeeCents,
+        collector.sellerMpUserId,
+      );
+    }
 
     return {
       paymentId: payment.id,
@@ -221,19 +390,42 @@ export const processCardPayment = createServerFn({ method: "POST" })
     const installments =
       order.payment_method === "debit" ? 1 : (order.installments ?? 1);
 
-    const payment = await mpCreatePayment({
-      transaction_amount: order.total_cents / 100,
-      token: data.token,
-      description: `Presente: ${order.gifts?.name ?? "Lista de presentes"}`,
-      installments,
-      payment_method_id: data.paymentMethodId,
-      issuer_id: data.issuerId || undefined,
-      payer: {
-        email: claims.email ?? "convidado@lista-presentes.com",
+    const collector = await resolveCollector(
+      supabase,
+      order.wedding_id,
+      order.total_cents,
+    );
+
+    const payment = await mpCreatePayment(
+      {
+        transaction_amount: order.total_cents / 100,
+        token: data.token,
+        description: `Presente: ${order.gifts?.name ?? "Lista de presentes"}`,
+        installments,
+        payment_method_id: data.paymentMethodId,
+        issuer_id: data.issuerId || undefined,
+        payer: {
+          email: claims.email ?? "convidado@lista-presentes.com",
+        },
+        external_reference: order.id,
+        ...(collector.split && collector.applicationFeeCents > 0
+          ? { application_fee: collector.applicationFeeCents / 100 }
+          : {}),
+        ...(webhookUrl() 
+          ? { notification_url: webhookUrl(collector.split ? order.wedding_id : undefined) }
+          : {}),
       },
-      external_reference: order.id,
-      ...(webhookUrl() ? { notification_url: webhookUrl() } : {}),
-    });
+      collector.accessToken,
+    );
+
+    if (collector.split) {
+      await recordSplit(
+        supabase,
+        order.id,
+        collector.applicationFeeCents,
+        collector.sellerMpUserId,
+      );
+    }
 
     const mapStatus = (s?: string): "pending" | "paid" | "cancelled" => {
       if (s === "approved") return "paid";
