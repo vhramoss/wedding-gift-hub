@@ -1,33 +1,69 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createHmac, timingSafeEqual } from "crypto";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
 /**
  * Webhook do Mercado Pago (IPN / Webhooks API).
- * Recebe notificações de mudança de status de pagamento e marca o pedido como
- * pago quando o pagamento for aprovado.
+ * Recebe notificações de mudança de status de pagamento e confirma o pedido
+ * via a função do banco `confirm_order_payment`, protegida por um segredo
+ * configurado pelo super-admin. Não usa a service role key.
  *
  * O Mercado Pago envia `data.id` (ID do pagamento) — no body (webhooks JSON)
  * ou na query string (IPN). Buscamos o pagamento na API do MP para confirmar.
  */
 
 const PAID_STATUSES = new Set(["approved"]);
-const CANCELLED_STATUSES = new Set(["rejected", "cancelled", "refunded", "charged_back"]);
+const CANCELLED_STATUSES = new Set([
+  "rejected",
+  "cancelled",
+  "refunded",
+  "charged_back",
+]);
+
+function makePublishableClient() {
+  const url = process.env["SUPABASE_URL"];
+  const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+  if (!url || !key) {
+    throw new Error("Missing Supabase environment variable(s).");
+  }
+  return createClient<Database>(url, key, {
+    global: {
+      fetch: (input, init) => {
+        const headers = new Headers(
+          typeof Request !== "undefined" && input instanceof Request
+            ? input.headers
+            : undefined,
+        );
+        if (init?.headers) {
+          new Headers(init.headers).forEach((v, k) => headers.set(k, v));
+        }
+        // Novas chaves sb_ são opacas, não JWT.
+        if (
+          (key.startsWith("sb_publishable_") || key.startsWith("sb_secret_")) &&
+          headers.get("Authorization") === `Bearer ${key}`
+        ) {
+          headers.delete("Authorization");
+        }
+        headers.set("apikey", key);
+        return fetch(input, { ...init, headers });
+      },
+    },
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
+}
 
 export const Route = createFileRoute("/api/public/mercadopago-webhook")({
   server: {
     handlers: {
-      POST: async ({ request }) => {
-        return handle(request);
-      },
-      GET: async ({ request }) => {
-        return handle(request);
-      },
+      POST: async ({ request }) => handle(request),
+      GET: async ({ request }) => handle(request),
     },
   },
 });
 
 async function handle(request: Request): Promise<Response> {
   const accessToken = process.env["MERCADOPAGO_ACCESS_TOKEN"];
+  const confirmSecret = process.env["ORDER_CONFIRM_SECRET"];
   if (!accessToken) {
     return new Response("Mercado Pago não configurado", { status: 503 });
   }
@@ -56,15 +92,11 @@ async function handle(request: Request): Promise<Response> {
   }
 
   if (!paymentId || paymentId === "null") {
-    // Acknowledge so MP stops retrying
     return new Response("ok", { status: 200 });
   }
 
-  // Buscar o pagamento na API do Mercado Pago para confirmar o status
-  let payment: {
-    status?: string;
-    external_reference?: string;
-  } | null = null;
+  // Buscar o pagamento na API do Mercado Pago para confirmar o status real.
+  let payment: { status?: string; external_reference?: string } | null = null;
 
   try {
     const res = await fetch(
@@ -73,7 +105,6 @@ async function handle(request: Request): Promise<Response> {
     );
     if (res.ok) payment = await res.json();
   } catch {
-    // network error — let MP retry
     return new Response("error", { status: 500 });
   }
 
@@ -86,37 +117,33 @@ async function handle(request: Request): Promise<Response> {
   const isPaid = PAID_STATUSES.has(status);
   const isCancelled = CANCELLED_STATUSES.has(status);
 
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  if (!isPaid && !isCancelled) {
+    return new Response("ok", { status: 200 });
+  }
 
-  const { data: order } = await supabaseAdmin
-    .from("orders")
-    .select("id, status")
-    .eq("id", orderId)
-    .maybeSingle();
+  // Confirma/cancela no banco via função protegida por segredo.
+  if (!confirmSecret) {
+    // Sem segredo configurado, deixa o MP tentar de novo depois.
+    return new Response("Segredo do webhook não configurado", { status: 500 });
+  }
 
-  if (!order) return new Response("ok", { status: 200 });
-
-  // Idempotente: só grava quando o status realmente muda.
-  if (isPaid && order.status !== "paid") {
-    await supabaseAdmin
-      .from("orders")
-      .update({
-        status: "paid",
-        paid_at: new Date().toISOString(),
-        mp_payment_id: Number(paymentId) || null,
-        provider: "mercadopago",
-      })
-      .eq("id", orderId);
-  } else if (isCancelled && order.status === "pending") {
-    await supabaseAdmin
-      .from("orders")
-      .update({ status: "cancelled" })
-      .eq("id", orderId);
+  try {
+    const supabase = makePublishableClient();
+    const mpId = Number(paymentId);
+    const { error } = await supabase.rpc("confirm_order_payment", {
+      p_order_id: orderId,
+      p_mp_payment_id: (Number.isFinite(mpId) ? mpId : null) as number,
+      p_status: status,
+      p_secret: confirmSecret,
+    });
+    if (error) {
+      console.error("confirm_order_payment error", error.message);
+      return new Response("error", { status: 500 });
+    }
+  } catch (e) {
+    console.error("webhook confirm failed", e);
+    return new Response("error", { status: 500 });
   }
 
   return new Response("ok", { status: 200 });
 }
-
-// Referência para silenciar import não usado em alguns bundlers
-void createHmac;
-void timingSafeEqual;

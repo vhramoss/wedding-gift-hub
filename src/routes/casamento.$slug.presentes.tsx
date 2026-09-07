@@ -52,7 +52,7 @@ function GiftsPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
-      <h1 className="text-center font-display text-4xl">Lista de presentes</h1>
+      <h1 className="text-center font-display text-3xl sm:text-4xl">Lista de presentes</h1>
       <div className="divider-gold mx-auto my-8 w-32" />
       <p className="mx-auto max-w-2xl text-center text-muted-foreground">
         Sua presença é o melhor presente, mas se quiser nos mimar, escolha uma opção abaixo. O

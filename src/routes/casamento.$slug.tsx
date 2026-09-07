@@ -95,18 +95,18 @@ function WeddingLayout() {
       <SiteHeader />
 
       <nav className="sticky top-16 z-30 border-b border-border/70 bg-background/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+        <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,auto)_1fr] items-center gap-2 px-4 py-3">
           <Link
             to="/casamento/$slug"
             params={{ slug }}
-            className="font-display text-2xl tracking-[0.3em] text-accent"
+            className="shrink-0 font-display text-xl tracking-[0.25em] text-accent sm:text-2xl sm:tracking-[0.3em]"
           >
             {initials}
           </Link>
 
-          <div className="flex items-center gap-1">
+          <div className="no-scrollbar flex items-center justify-end gap-1 overflow-x-auto">
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 px-3 py-2 text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-primary">
+              <DropdownMenuTrigger className="flex shrink-0 items-center gap-1 whitespace-nowrap px-2 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-primary sm:px-3 sm:text-xs sm:tracking-[0.18em]">
                 Páginas <ChevronDown className="size-3" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -124,7 +124,7 @@ function WeddingLayout() {
               to="/casamento/$slug/presentes"
               params={{ slug }}
               activeProps={{ className: "text-primary" }}
-              className="px-3 py-2 text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-primary"
+              className="shrink-0 whitespace-nowrap px-2 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-primary sm:px-3 sm:text-xs sm:tracking-[0.18em]"
             >
               Presentes
             </Link>
@@ -132,9 +132,10 @@ function WeddingLayout() {
               to="/casamento/$slug/confirmar"
               params={{ slug }}
               activeProps={{ className: "text-primary" }}
-              className="px-3 py-2 text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-primary"
+              className="shrink-0 whitespace-nowrap px-2 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-primary sm:px-3 sm:text-xs sm:tracking-[0.18em]"
             >
-              Confirmar presença
+              Confirmar
+              <span className="hidden sm:inline"> presença</span>
             </Link>
           </div>
         </div>
@@ -151,12 +152,12 @@ function WeddingLayout() {
             className="absolute inset-0 size-full object-cover opacity-25"
           />
         ) : null}
-        <div className="relative mx-auto max-w-5xl px-4 py-16 text-center">
-          <h1 className="font-display text-5xl font-semibold md:text-6xl">
+        <div className="relative mx-auto max-w-5xl px-4 py-10 text-center sm:py-16">
+          <h1 className="text-balance-title font-display text-3xl font-semibold sm:text-5xl md:text-6xl">
             {wedding.bride_name} <span className="text-accent">&</span> {wedding.groom_name}
           </h1>
-          <div className="divider-gold mx-auto my-6 w-40" />
-          <div className="flex flex-wrap justify-center gap-6 text-sm uppercase tracking-[0.2em] text-muted-foreground">
+          <div className="divider-gold mx-auto my-5 w-28 sm:my-6 sm:w-40" />
+          <div className="flex flex-col items-center gap-3 text-xs uppercase tracking-[0.16em] text-muted-foreground sm:flex-row sm:flex-wrap sm:justify-center sm:gap-6 sm:text-sm sm:tracking-[0.2em]">
             {date ? (
               <span className="flex items-center gap-2">
                 <CalendarDays className="size-4" /> {date}

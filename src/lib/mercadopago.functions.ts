@@ -2,26 +2,21 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { computeCharge, type PaymentMethod } from "@/lib/br";
+import type { PaymentMethod } from "@/lib/br";
 
 /**
- * Integração de pagamento real com o Mercado Pago.
+ * Integração de pagamento real com o Mercado Pago (dono do site = intermediador).
  *
- * O dono do site é o intermediador: Pix e cartão são processados pela conta
- * do Mercado Pago do dono. O dinheiro cai na conta dele; o repasse aos noivos
- * (líquido da comissão configurada por casamento) é feito manualmente.
+ * Refatorado para NÃO usar a SUPABASE_SERVICE_ROLE_KEY:
+ *  - createGiftOrder -> RPC create_gift_order (valores derivados no banco)
+ *  - createPixPayment -> RPC record_pix_payment (guarda QR + comissão)
+ *  - processCardPayment -> chama MP e confirma via RPC confirm_order_payment
+ *  - webhook -> RPC confirm_order_payment (segredo do super-admin)
  *
  * Regras de segurança:
- *  - O navegador NUNCA envia valores. Ele manda apenas giftId, método,
- *    parcelas e recado; o servidor busca o preço real no banco.
- *  - Nenhum dado de cartão passa pelo servidor: o brick do Mercado Pago
- *    tokeniza no navegador e só o token chega aqui.
- *  - O pedido nasce "pending" e só vira "paid" quando o Mercado Pago
- *    confirma (resposta aprovada do cartão ou webhook do Pix).
- *
- * Variáveis de ambiente:
- *  - MERCADOPAGO_ACCESS_TOKEN  (secret, servidor)
- *  - MERCADOPAGO_PUBLIC_KEY     (publica, navegador)
+ *  - O navegador NUNCA envia valores. Só giftId, método, parcelas e recado.
+ *  - Nenhum dado de cartão passa pelo servidor (brick do MP tokeniza).
+ *  - O pedido só vira "pago" quando o Mercado Pago confirma.
  */
 
 type MpPaymentResponse = {
@@ -48,6 +43,11 @@ function webhookUrl(): string {
   const headers = req?.headers ?? new Headers();
   const host =
     headers.get("x-forwarded-host") || headers.get("host") || "";
+  // Mercado Pago exige uma URL pública válida. Em localhost (preview/dev)
+  // o webhook não seria alcançável mesmo assim, então omitimos.
+  if (!host || host.startsWith("localhost") || host.startsWith("127.")) {
+    return "";
+  }
   const proto =
     headers.get("x-forwarded-proto") ||
     (host.startsWith("localhost") ? "http" : "https");
@@ -91,8 +91,8 @@ export const getMercadoPagoConfig = createServerFn({ method: "GET" }).handler(
 );
 
 /**
- * Cria o pedido pendente no servidor. O navegador não envia valores —
- * o preço vem do banco e as taxas são calculadas aqui.
+ * Cria o pedido pendente no servidor, via função do banco. O navegador não envia
+ * valores — o preço e as taxas são derivados dentro de create_gift_order (SQL).
  */
 export const createGiftOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -107,57 +107,24 @@ export const createGiftOrder = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-
-    const { data: gift, error: giftError } = await supabase
-      .from("gifts")
-      .select("id, wedding_id, name, price_cents, quantity, purchased_count, active")
-      .eq("id", data.giftId)
-      .maybeSingle();
-    if (giftError) throw giftError;
-    if (!gift || !gift.active) throw new Error("Presente indisponível.");
-    if (gift.quantity > 0 && gift.purchased_count >= gift.quantity) {
-      throw new Error("Este presente já foi todo comprado.");
-    }
-
-    // Débito é obrigatoriamente à vista; Pix também.
-    const method = data.method as PaymentMethod;
-    const installments = method === "credit" ? data.installments : 1;
-    const charge = computeCharge(gift.price_cents, method, installments);
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name, cpf")
-      .eq("id", userId)
-      .maybeSingle();
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { data: order, error } = await supabaseAdmin
-      .from("orders")
-      .insert({
-        wedding_id: gift.wedding_id,
-        gift_id: gift.id,
-        user_id: userId,
-        guest_name: profile?.full_name ?? "",
-        guest_cpf: profile?.cpf ?? null,
-        payment_method: method,
-        installments,
-        amount_cents: gift.price_cents,
-        fee_cents: charge.feeCents,
-        total_cents: charge.totalCents,
-        message: data.message.trim() || null,
-        status: "pending",
-        paid_at: null,
-      })
-      .select("id, total_cents, installments")
-      .single();
+    const { supabase } = context;
+    const { data: result, error } = await supabase.rpc("create_gift_order", {
+      p_gift_id: data.giftId,
+      p_method: data.method,
+      p_installments: data.installments,
+      p_message: data.message,
+    });
     if (error) throw error;
-
+    const row = (result ?? []) as {
+      order_id: string;
+      total_cents: number;
+      installments: number;
+    }[];
+    if (!row[0]) throw new Error("Não foi possível criar o pedido.");
     return {
-      orderId: order.id,
-      totalCents: order.total_cents,
-      installments: order.installments,
+      orderId: row[0].order_id,
+      totalCents: row[0].total_cents,
+      installments: row[0].installments,
     };
   });
 
@@ -176,7 +143,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
 
     const { data: order, error } = await supabase
       .from("orders")
-      .select("id, gift_id, wedding_id, user_id, payment_method, status, total_cents, gifts(name), weddings(commission_percent, bride_name, groom_name)")
+      .select("id, gift_id, wedding_id, user_id, payment_method, status, total_cents, gifts(name)")
       .eq("id", data.orderId)
       .maybeSingle();
     if (error) throw error;
@@ -184,11 +151,6 @@ export const createPixPayment = createServerFn({ method: "POST" })
     if (order.user_id !== userId) throw new Error("Acesso negado ao pedido.");
     if (order.payment_method !== "pix") throw new Error("Pedido não é Pix.");
     if (order.status !== "pending") throw new Error("Pedido não está pendente.");
-
-    const commissionPercent = Number(order.weddings?.commission_percent ?? 0);
-    const commissionCents = Math.round(
-      (order.total_cents * commissionPercent) / 100,
-    );
 
     const payment = await mpCreatePayment({
       transaction_amount: order.total_cents / 100,
@@ -199,28 +161,20 @@ export const createPixPayment = createServerFn({ method: "POST" })
         first_name: "Convidado",
       },
       external_reference: order.id,
-      notification_url: webhookUrl(),
-      metadata: { order_id: order.id, commission_cents: commissionCents },
+      ...(webhookUrl() ? { notification_url: webhookUrl() } : {}),
     });
 
     const qrCode = payment.point_of_interaction?.transaction_data?.qr_code ?? "";
     const qrCodeBase64 =
       payment.point_of_interaction?.transaction_data?.qr_code_base64 ?? "";
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { error: updError } = await supabaseAdmin
-      .from("orders")
-      .update({
-        mp_payment_id: payment.id ?? null,
-        provider: "mercadopago",
-        pix_payload: qrCode,
-        pix_qr_base64: qrCodeBase64,
-        commission_cents: commissionCents,
-      })
-      .eq("id", order.id);
-
-    if (updError) throw updError;
+    const { error: rpcError } = await supabase.rpc("record_pix_payment", {
+      p_order_id: order.id,
+      p_mp_payment_id: (payment.id ?? null) as number,
+      p_payload: qrCode,
+      p_qr_base64: qrCodeBase64,
+    });
+    if (rpcError) throw rpcError;
 
     return {
       paymentId: payment.id,
@@ -253,7 +207,7 @@ export const processCardPayment = createServerFn({ method: "POST" })
 
     const { data: order, error } = await supabase
       .from("orders")
-      .select("id, gift_id, wedding_id, user_id, payment_method, status, total_cents, installments, gifts(name), weddings(commission_percent)")
+      .select("id, gift_id, wedding_id, user_id, payment_method, status, total_cents, installments, gifts(name)")
       .eq("id", data.orderId)
       .maybeSingle();
     if (error) throw error;
@@ -267,11 +221,6 @@ export const processCardPayment = createServerFn({ method: "POST" })
     const installments =
       order.payment_method === "debit" ? 1 : (order.installments ?? 1);
 
-    const commissionPercent = Number(order.weddings?.commission_percent ?? 0);
-    const commissionCents = Math.round(
-      (order.total_cents * commissionPercent) / 100,
-    );
-
     const payment = await mpCreatePayment({
       transaction_amount: order.total_cents / 100,
       token: data.token,
@@ -283,8 +232,7 @@ export const processCardPayment = createServerFn({ method: "POST" })
         email: claims.email ?? "convidado@lista-presentes.com",
       },
       external_reference: order.id,
-      notification_url: webhookUrl(),
-      metadata: { order_id: order.id, commission_cents: commissionCents },
+      ...(webhookUrl() ? { notification_url: webhookUrl() } : {}),
     });
 
     const mapStatus = (s?: string): "pending" | "paid" | "cancelled" => {
@@ -294,23 +242,51 @@ export const processCardPayment = createServerFn({ method: "POST" })
     };
     const newStatus = mapStatus(payment.status);
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { error: updError } = await supabaseAdmin
-      .from("orders")
-      .update({
-        mp_payment_id: payment.id ?? null,
-        provider: "mercadopago",
-        commission_cents: commissionCents,
-        status: newStatus,
-        paid_at: newStatus === "paid" ? new Date().toISOString() : null,
-      })
-      .eq("id", order.id);
-    if (updError) throw updError;
+    // Confirma no banco via função protegida por segredo (mesmo segredo do webhook).
+    // Best-effort: se o segredo ainda não foi configurado, o webhook fará a confirmação.
+    const secret = process.env["ORDER_CONFIRM_SECRET"];
+    if (secret) {
+      try {
+        await supabase.rpc("confirm_order_payment", {
+          p_order_id: order.id,
+          p_mp_payment_id: (payment.id ?? null) as number,
+          p_status: payment.status ?? "",
+          p_secret: secret,
+        });
+      } catch {
+        // log e segue — o webhook confirma posteriormente
+        console.error("confirm_order_payment falhou (cartão); webhook fará a confirmação.");
+      }
+    }
 
     return {
       status: newStatus,
       paymentId: payment.id,
       detail: payment.status_detail ?? "",
     };
+  });
+
+/** Permite ao super-admin definir o segredo do webhook. */
+export const setOrderConfirmSecret = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z.object({ secret: z.string().min(16).max(200) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("set_order_confirm_secret", {
+      p_secret: data.secret,
+    });
+    if (error) throw error;
+    return { ok: true };
+  });
+
+/** Indica (sem revelar) se o segredo do webhook já foi configurado. */
+export const getOrderConfirmSecretSet = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase.rpc(
+      "order_confirm_secret_is_set",
+    );
+    if (error) throw error;
+    return { set: Boolean(data) };
   });

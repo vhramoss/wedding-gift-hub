@@ -456,7 +456,7 @@ function CheckoutPage() {
 
   // ---------- Formulário inicial ----------
   return (
-    <div className="mx-auto grid max-w-5xl gap-8 px-4 py-12 lg:grid-cols-[1fr_360px]">
+    <div className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:gap-8 sm:py-12 lg:grid-cols-[1fr_360px]">
       <div className="space-y-6">
         <div>
           <Link
@@ -466,7 +466,7 @@ function CheckoutPage() {
           >
             ← Voltar para a lista
           </Link>
-          <h1 className="mt-3 font-display text-4xl">Finalizar presente</h1>
+          <h1 className="mt-3 font-display text-3xl sm:text-4xl">Finalizar presente</h1>
         </div>
 
         <Card className="shadow-card">

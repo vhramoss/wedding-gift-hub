@@ -27,8 +27,8 @@ export const Route = createFileRoute("/casamento/$slug/")({
 
 function Unit({ value, label }: { value: number; label: string }) {
   return (
-    <div className="min-w-20 rounded-lg border border-border/60 bg-background/70 px-4 py-3">
-      <p className="font-display text-4xl text-primary">{String(value).padStart(2, "0")}</p>
+    <div className="min-w-16 rounded-lg border border-border/60 bg-background/70 px-3 py-3 sm:min-w-20 sm:px-4">
+      <p className="font-display text-2xl text-primary sm:text-4xl">{String(value).padStart(2, "0")}</p>
       <p className="mt-1 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">{label}</p>
     </div>
   );

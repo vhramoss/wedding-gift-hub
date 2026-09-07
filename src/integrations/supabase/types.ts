@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          key: string
+          value: string
+        }
+        Insert: {
+          key: string
+          value?: string
+        }
+        Update: {
+          key?: string
+          value?: string
+        }
+        Relationships: []
+      }
       gifts: {
         Row: {
           active: boolean
@@ -708,6 +723,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      compute_charge: {
+        Args: {
+          p_amount_cents: number
+          p_installments: number
+          p_method: string
+        }
+        Returns: {
+          fee_cents: number
+          installment_cents: number
+          total_cents: number
+        }[]
+      }
+      confirm_order_payment: {
+        Args: {
+          p_mp_payment_id: number
+          p_order_id: string
+          p_secret: string
+          p_status: string
+        }
+        Returns: undefined
+      }
+      create_gift_order: {
+        Args: {
+          p_gift_id: string
+          p_installments: number
+          p_message: string
+          p_method: string
+        }
+        Returns: {
+          installments: number
+          order_id: string
+          total_cents: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -715,12 +764,26 @@ export type Database = {
         }
         Returns: boolean
       }
+      order_confirm_secret_is_set: { Args: never; Returns: boolean }
       owns_wedding: { Args: { _wedding_id: string }; Returns: boolean }
+      record_pix_payment: {
+        Args: {
+          p_mp_payment_id: number
+          p_order_id: string
+          p_payload: string
+          p_qr_base64: string
+        }
+        Returns: undefined
+      }
       redeem_invite: {
         Args: { _token: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
       rsvp_open: { Args: { _wedding_id: string }; Returns: boolean }
+      set_order_confirm_secret: {
+        Args: { p_secret: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "guest" | "owner"

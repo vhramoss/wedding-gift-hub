@@ -279,11 +279,11 @@ function CouplePanel() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <div className="mx-auto max-w-6xl px-4 py-12">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-4xl">Área dos noivos</h1>
-            <p className="mt-2 text-muted-foreground">
+            <h1 className="font-display text-3xl sm:text-4xl">Área dos noivos</h1>
+            <p className="mt-2 break-words text-sm text-muted-foreground sm:text-base">
               {wedding.bride_name} & {wedding.groom_name} · /casamento/{wedding.slug}
             </p>
           </div>
@@ -374,8 +374,8 @@ function CouplePanel() {
               {(giftsQuery.data ?? []).map((gift) => (
                 <Card key={gift.id} className={gift.active ? "" : "opacity-50"}>
                   <CardContent className="flex items-center justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg">{gift.name}</h3>
+                    <div className="min-w-0">
+                      <h3 className="break-words text-lg">{gift.name}</h3>
                       <p className="text-sm text-muted-foreground">
                         {formatBRL(gift.price_cents)} · {gift.purchased_count}/{gift.quantity}{" "}
                         presenteado(s)
@@ -397,9 +397,9 @@ function CouplePanel() {
 
           <TabsContent value="orders" className="mt-6 space-y-4">
             <Card className="shadow-card">
-              <CardContent className="flex items-center justify-between">
+              <CardContent className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-muted-foreground">Total recebido (pagamentos pagos)</span>
-                <span className="text-3xl font-medium text-primary">{formatBRL(totalPaid)}</span>
+                <span className="text-2xl font-medium text-primary sm:text-3xl">{formatBRL(totalPaid)}</span>
               </CardContent>
             </Card>
             {(ordersQuery.data ?? []).map((order) => (

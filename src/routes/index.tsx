@@ -89,18 +89,18 @@ function Home() {
       <SiteHeader />
 
       <section className="bg-romance">
-        <div className="mx-auto max-w-4xl px-4 py-24 text-center">
+        <div className="mx-auto max-w-4xl px-4 py-14 text-center sm:py-24">
           <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">{BRAND.tagline}</p>
-          <h1 className="text-balance-title mt-5 text-5xl leading-tight font-semibold md:text-6xl">
+          <h1 className="text-balance-title mt-5 text-3xl leading-tight font-semibold sm:text-5xl md:text-6xl">
             O site do casamento de vocês, feito com carinho e sob medida
           </h1>
           <div className="divider-gold mx-auto my-8 w-40" />
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+          <p className="mx-auto max-w-2xl text-base text-muted-foreground sm:text-lg">
             A gente senta com os noivos, monta cada página do site, cadastra a lista de presentes com
             os valores que vocês quiserem e entrega os convites prontos, com link e QR Code para os
             convidados.
           </p>
-          <div className="mt-9 flex flex-wrap justify-center gap-3">
+          <div className="mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap">
             <Button asChild size="lg">
               <Link to="/auth">Entrar</Link>
             </Button>
@@ -127,14 +127,14 @@ function Home() {
       </section>
 
       <section className="border-t border-border/70">
-        <div className="mx-auto max-w-6xl px-4 py-20">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:py-20">
           <div className="text-center">
-            <h2 className="font-display text-4xl">Portfólio</h2>
+            <h2 className="font-display text-3xl sm:text-4xl">Portfólio</h2>
             <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
               Alguns dos ambientes que criamos para os nossos casais.
             </p>
           </div>
-          <div className="mt-12 grid gap-8 md:grid-cols-3">
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 sm:gap-8 md:grid-cols-3 lg:mt-12">
             {PORTFOLIO.map((item) => (
               <Card key={item.title} className="overflow-hidden border-border/70">
                 <img
@@ -144,7 +144,7 @@ function Home() {
                   className="h-56 w-full object-cover"
                 />
                 <CardContent className="space-y-2 py-6">
-                  <h3 className="font-display text-2xl">{item.title}</h3>
+                  <h3 className="font-display text-xl sm:text-2xl">{item.title}</h3>
                   <p className="text-sm text-muted-foreground">{item.text}</p>
                 </CardContent>
               </Card>
@@ -154,11 +154,11 @@ function Home() {
       </section>
 
       <section className="border-t border-border/70 bg-secondary/40">
-        <div className="mx-auto max-w-6xl px-4 py-20">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:py-20">
           <div className="text-center">
-            <h2 className="font-display text-4xl">Tudo o que o site inclui</h2>
+            <h2 className="font-display text-3xl sm:text-4xl">Tudo o que o site inclui</h2>
           </div>
-          <div className="mt-12 grid gap-8 md:grid-cols-3">
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 sm:gap-8 md:grid-cols-3 lg:mt-12">
             {[
               {
                 icon: HeartHandshake,
@@ -194,7 +194,7 @@ function Home() {
               <Card key={item.title} className="border-border/70">
                 <CardContent className="space-y-3 py-8 text-center">
                   <item.icon className="mx-auto size-8 text-accent" />
-                  <h3 className="font-display text-2xl">{item.title}</h3>
+                  <h3 className="font-display text-xl sm:text-2xl">{item.title}</h3>
                   <p className="text-sm text-muted-foreground">{item.text}</p>
                 </CardContent>
               </Card>
@@ -204,8 +204,8 @@ function Home() {
       </section>
 
       <section className="border-t border-border/70">
-        <div className="mx-auto max-w-3xl px-4 py-20 text-center">
-          <h2 className="font-display text-4xl">Vamos criar o site de vocês?</h2>
+        <div className="mx-auto max-w-3xl px-4 py-14 sm:py-20 text-center">
+          <h2 className="font-display text-3xl sm:text-4xl">Vamos criar o site de vocês?</h2>
           <p className="mt-3 text-muted-foreground">
             Fale com a gente pelo WhatsApp {BRAND.phoneDisplay} e receba um orçamento.
           </p>

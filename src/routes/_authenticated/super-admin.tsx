@@ -19,6 +19,10 @@ import { useSession } from "@/hooks/useSession";
 import { useMyRoles, type AppRole } from "@/hooks/useRoles";
 import { formatBRL } from "@/lib/br";
 import { BRAND } from "@/lib/brand";
+import {
+  getOrderConfirmSecretSet,
+  setOrderConfirmSecret,
+} from "@/lib/mercadopago.functions";
 
 export const Route = createFileRoute("/_authenticated/super-admin")({
   head: () => ({
@@ -247,6 +251,7 @@ function SuperAdminPage() {
             <TabsTrigger value="users">Usuários</TabsTrigger>
             <TabsTrigger value="invites">Convites</TabsTrigger>
             <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
+            <TabsTrigger value="security">Segurança</TabsTrigger>
           </TabsList>
 
           <TabsContent value="weddings" className="mt-6 space-y-4">
@@ -476,11 +481,17 @@ function SuperAdminPage() {
           <TabsContent value="vendors" className="mt-6">
             <VendorsAdminTab />
           </TabsContent>
+
+          <TabsContent value="security" className="mt-6">
+            <SecurityTab />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
   );
 }
+
+import { useServerFn } from "@tanstack/react-start";
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
@@ -488,5 +499,82 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={`mt-1 text-lg font-semibold ${accent ? "text-accent" : ""}`}>{value}</p>
     </div>
+  );
+}
+
+function SecurityTab() {
+  const setFn = useServerFn(setOrderConfirmSecret);
+  const { data: secretState } = useQuery({
+    queryKey: ["order-confirm-secret-set"],
+    queryFn: () => getOrderConfirmSecretSet(),
+  });
+  const [secret, setSecret] = useState("");
+  const [show, setShow] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (secret.trim().length < 16) {
+      toast.error("Use um segredo de no mínimo 16 caracteres.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await setFn({ data: { secret: secret.trim() } });
+      toast.success("Segredo do webhook salvo!");
+      setSecret("");
+      setShow(false);
+    } catch (e) {
+      toast.error("Erro ao salvar", { description: e instanceof Error ? e.message : undefined });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card className="max-w-2xl shadow-card">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 font-display text-xl">
+          <ShieldCheck className="size-5 text-accent" /> Segredo do webhook
+        </CardTitle>
+        <CardDescription>
+          Segredo usado para confirmar pagamentos sem depender da chave de serviço
+          do banco. Gere um valor aleatório, salve aqui e use o <b>mesmo valor</b> na
+          variável de ambiente <code>ORDER_CONFIRM_SECRET</code> (na Vercel e no Lovable).
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-2 text-sm">
+          {secretState?.set ? (
+            <Badge className="bg-emerald-600/15 text-emerald-600">Segredo configurado</Badge>
+          ) : (
+            <Badge variant="destructive">Segredo não configurado — pagamentos não confirmam</Badge>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="secret">Novo segredo</Label>
+          <div className="flex gap-2">
+            <Input
+              id="secret"
+              type={show ? "text" : "password"}
+              placeholder="Cole aqui um segredo aleatório (ex.: openssl rand -hex 32)"
+              value={secret}
+              onChange={(e) => setSecret(e.target.value)}
+            />
+            <Button variant="outline" onClick={() => setShow((s) => !s)}>
+              {show ? "Ocultar" : "Mostrar"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Dica: gere com <code>openssl rand -hex 32</code> no terminal. Use o mesmo
+            valor aqui e na variável de ambiente.
+          </p>
+        </div>
+
+        <Button onClick={save} disabled={saving || secret.trim().length < 16}>
+          {saving ? "Salvando..." : "Salvar segredo"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

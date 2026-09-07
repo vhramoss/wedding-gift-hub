@@ -96,7 +96,7 @@ function RsvpPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-16">
-      <h1 className="text-center font-display text-4xl">Confirmar presença</h1>
+      <h1 className="text-center font-display text-3xl sm:text-4xl">Confirmar presença</h1>
       <div className="divider-gold mx-auto my-8 w-32" />
 
       <Card className="shadow-card border-border/70">
