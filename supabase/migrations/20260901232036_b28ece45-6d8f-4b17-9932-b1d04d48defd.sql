@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.owns_wedding(uuid) FROM anon;
