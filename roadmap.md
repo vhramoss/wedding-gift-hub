@@ -1,7 +1,12 @@
 # Roadmap
 
 - [x] Ativar pagamento real (Mercado Pago) com o dono do site como intermediador de todos os presentes
-- [x] Pix e cartões passam 100% pelo dono do site (QR do MP no checkout; sem Pix direto dos noivos)
-- [x] Webhook do Mercado Pago confirma o pagamento sozinho e marca o presente como pago
+- [x] Pix e cartões (débito à vista e crédito em até 12x) passam 100% pelo dono do site
+- [x] Pedido criado no servidor com preço vindo do banco (navegador não envia valores)
+- [x] Cartão tokenizado pelo Mercado Pago (número/CVV nunca chegam ao servidor nem ao banco)
+- [x] Pix com QR Code do Mercado Pago + fallback gerado a partir do código, com botão copiar
+- [x] Webhook confirma o pagamento e só então o pedido vira "pago" (e o presente conta como comprado)
+- [x] Pedidos recusados/estornados voltam para cancelado pelo webhook
+- [x] Banco: convidado não pode mais criar nem alterar pedidos direto pelo navegador
 - [x] Comissão por casamento registrada em cada pedido (commission_cents) visível no super admin
 - [ ] Fluxo de repasse aos noivos: descontar comissão e registrar valores a repassar (manual por enquanto)
