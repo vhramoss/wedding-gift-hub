@@ -528,6 +528,44 @@ export type Database = {
           },
         ]
       }
+      wedding_notifications: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          read_at: string | null
+          title: string
+          wedding_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          kind: string
+          read_at?: string | null
+          title: string
+          wedding_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          read_at?: string | null
+          title?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_notifications_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wedding_payment_accounts: {
         Row: {
           access_token: string
@@ -712,6 +750,10 @@ export type Database = {
       }
       weddings: {
         Row: {
+          approval_note: string | null
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           bride_name: string
           ceremony_address: string | null
           ceremony_map_url: string | null
@@ -724,6 +766,7 @@ export type Database = {
           groom_name: string
           hashtag: string | null
           id: string
+          notify_whatsapp: string | null
           owner_id: string | null
           party_address: string | null
           party_image_url: string | null
@@ -732,6 +775,12 @@ export type Database = {
           party_venue: string | null
           pix_holder: string | null
           pix_key: string | null
+          plan: string
+          plan_billing: string
+          plan_fee_cents: number
+          plan_notes: string | null
+          plan_paid: boolean
+          plan_started_on: string | null
           published: boolean
           rsvp_deadline: string | null
           slug: string
@@ -752,6 +801,10 @@ export type Database = {
           welcome_message: string | null
         }
         Insert: {
+          approval_note?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           bride_name: string
           ceremony_address?: string | null
           ceremony_map_url?: string | null
@@ -764,6 +817,7 @@ export type Database = {
           groom_name: string
           hashtag?: string | null
           id?: string
+          notify_whatsapp?: string | null
           owner_id?: string | null
           party_address?: string | null
           party_image_url?: string | null
@@ -772,6 +826,12 @@ export type Database = {
           party_venue?: string | null
           pix_holder?: string | null
           pix_key?: string | null
+          plan?: string
+          plan_billing?: string
+          plan_fee_cents?: number
+          plan_notes?: string | null
+          plan_paid?: boolean
+          plan_started_on?: string | null
           published?: boolean
           rsvp_deadline?: string | null
           slug: string
@@ -792,6 +852,10 @@ export type Database = {
           welcome_message?: string | null
         }
         Update: {
+          approval_note?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           bride_name?: string
           ceremony_address?: string | null
           ceremony_map_url?: string | null
@@ -804,6 +868,7 @@ export type Database = {
           groom_name?: string
           hashtag?: string | null
           id?: string
+          notify_whatsapp?: string | null
           owner_id?: string | null
           party_address?: string | null
           party_image_url?: string | null
@@ -812,6 +877,12 @@ export type Database = {
           party_venue?: string | null
           pix_holder?: string | null
           pix_key?: string | null
+          plan?: string
+          plan_billing?: string
+          plan_fee_cents?: number
+          plan_notes?: string | null
+          plan_paid?: boolean
+          plan_started_on?: string | null
           published?: boolean
           rsvp_deadline?: string | null
           slug?: string
@@ -871,6 +942,18 @@ export type Database = {
           installments: number
           order_id: string
           total_cents: number
+        }[]
+      }
+      create_own_wedding: {
+        Args: {
+          p_bride: string
+          p_date?: string
+          p_groom: string
+          p_slug: string
+        }
+        Returns: {
+          slug: string
+          wedding_id: string
         }[]
       }
       disconnect_wedding_mp: {
@@ -935,6 +1018,23 @@ export type Database = {
       }
       set_order_confirm_secret: {
         Args: { p_secret: string }
+        Returns: undefined
+      }
+      set_wedding_approval: {
+        Args: { _note?: string; _status: string; _wedding_id: string }
+        Returns: undefined
+      }
+      set_wedding_plan: {
+        Args: {
+          _billing: string
+          _commission_percent?: number
+          _fee_cents: number
+          _notes?: string
+          _paid: boolean
+          _plan: string
+          _started_on?: string
+          _wedding_id: string
+        }
         Returns: undefined
       }
       wedding_donors: {

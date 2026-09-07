@@ -80,8 +80,7 @@ function AuthPage() {
           <CardHeader className="text-center">
             <CardTitle className="font-display text-2xl">Entrar</CardTitle>
             <CardDescription>
-              Acesse com seu e-mail e senha. Novas contas são criadas apenas pelo link de convite
-              enviado pelos noivos.
+              Acesse com seu e-mail e senha. Convidados entram pelo link de convite dos noivos.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -112,8 +111,25 @@ function AuthPage() {
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
               </form>
+
+              <p className="mt-4 text-center text-sm text-muted-foreground">
+                São os noivos?{" "}
+                <Link to="/criar-conta" className="underline">
+                  Criar o site do casamento
+                </Link>
+              </p>
           </CardContent>
         </Card>
+
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          <Link to="/termos" className="underline">
+            Termos de uso
+          </Link>{" "}
+          ·{" "}
+          <Link to="/privacidade" className="underline">
+            Política de privacidade
+          </Link>
+        </p>
       </div>
     </div>
   );

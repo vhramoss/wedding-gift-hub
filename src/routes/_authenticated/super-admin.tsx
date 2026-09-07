@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ExternalLink, Percent, ShieldCheck, Trash2, Unlink, UserPlus } from "lucide-react";
+import { ExternalLink, ShieldCheck, Trash2, Unlink, UserPlus } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PayoutsTab } from "@/components/admin/PayoutsTab";
+import { WeddingPlanCard } from "@/components/admin/WeddingPlanCard";
 import { useSession } from "@/hooks/useSession";
 import { useMyRoles, type AppRole } from "@/hooks/useRoles";
 import { formatBRL } from "@/lib/br";
@@ -286,28 +287,10 @@ function SuperAdminPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid gap-4 sm:grid-cols-3">
-                        <div className="space-y-2">
-                          <Label htmlFor={`rate-${w.id}`}>
-                            <Percent className="size-3" /> Comissão por presente (%)
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id={`rate-${w.id}`}
-                              type="number"
-                              min={0}
-                              max={100}
-                              step="0.5"
-                              defaultValue={Number(w.commission_percent ?? 0)}
-                              onBlur={(e) => {
-                                const value = Number(e.target.value);
-                                if (!Number.isFinite(value) || value === Number(w.commission_percent ?? 0)) return;
-                                updateWedding.mutate({ id: w.id, patch: { commission_percent: value } });
-                              }}
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
+                       <WeddingPlanCard wedding={w} />
+
+                       <div className="grid gap-4 sm:grid-cols-2">
+                         <div className="space-y-2">
                           <Label>Noivos responsáveis</Label>
                           <p className="text-sm text-muted-foreground">
                             {owner?.full_name || (w.owner_id ? "Usuário sem nome" : "Sem conexão")}

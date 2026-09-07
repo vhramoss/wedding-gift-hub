@@ -12,6 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CriarContaRouteImport } from './routes/criar-conta'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as AuthenticatedConectarPagamentoRouteImport } from './routes/_authenticated/conectar-pagamento'
 import { Route as AuthenticatedMeusPresentesRouteImport } from './routes/_authenticated/meus-presentes'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
@@ -44,6 +47,21 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CriarContaRoute = CriarContaRouteImport.update({
+  id: '/criar-conta',
+  path: '/criar-conta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedConectarPagamentoRoute =
@@ -151,6 +169,9 @@ const CasamentoSlugPresenteGiftIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/criar-conta': typeof CriarContaRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
   '/conectar-pagamento': typeof AuthenticatedConectarPagamentoRoute
   '/meus-presentes': typeof AuthenticatedMeusPresentesRoute
   '/painel': typeof AuthenticatedPainelRoute
@@ -174,6 +195,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/criar-conta': typeof CriarContaRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
   '/conectar-pagamento': typeof AuthenticatedConectarPagamentoRoute
   '/meus-presentes': typeof AuthenticatedMeusPresentesRoute
   '/painel': typeof AuthenticatedPainelRoute
@@ -198,6 +222,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/criar-conta': typeof CriarContaRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
   '/_authenticated/conectar-pagamento': typeof AuthenticatedConectarPagamentoRoute
   '/_authenticated/meus-presentes': typeof AuthenticatedMeusPresentesRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
@@ -223,6 +250,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/criar-conta'
+    | '/privacidade'
+    | '/termos'
     | '/conectar-pagamento'
     | '/meus-presentes'
     | '/painel'
@@ -246,6 +276,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/criar-conta'
+    | '/privacidade'
+    | '/termos'
     | '/conectar-pagamento'
     | '/meus-presentes'
     | '/painel'
@@ -269,6 +302,9 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/criar-conta'
+    | '/privacidade'
+    | '/termos'
     | '/_authenticated/conectar-pagamento'
     | '/_authenticated/meus-presentes'
     | '/_authenticated/painel'
@@ -294,6 +330,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  CriarContaRoute: typeof CriarContaRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
+  TermosRoute: typeof TermosRoute
   CasamentoSlugRoute: typeof CasamentoSlugRouteWithChildren
   ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
 }
@@ -319,6 +358,27 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/criar-conta': {
+      id: '/criar-conta'
+      path: '/criar-conta'
+      fullPath: '/criar-conta'
+      preLoaderRoute: typeof CriarContaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/conectar-pagamento': {
@@ -514,6 +574,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  CriarContaRoute: CriarContaRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
+  TermosRoute: TermosRoute,
   CasamentoSlugRoute: CasamentoSlugRouteWithChildren,
   ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,
 }

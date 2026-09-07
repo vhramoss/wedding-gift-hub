@@ -22,6 +22,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PaymentAccountTab } from "@/components/painel/PaymentAccountTab";
 import { PayoutSummary } from "@/components/painel/PayoutSummary";
+import { NotificationsTab } from "@/components/painel/NotificationsTab";
+import { whatsappLink } from "@/lib/brand";
 import { downloadCsv } from "@/lib/csv";
 import { useSession } from "@/hooks/useSession";
 import { useMyRoles } from "@/hooks/useRoles";
@@ -310,11 +312,41 @@ function CouplePanel() {
           </Button>
         </div>
 
+        {(wedding as { approval_status?: string | null }).approval_status !== "approved" ? (
+          <Card className="mt-6 border-accent/50 shadow-card">
+            <CardHeader>
+              <CardTitle className="text-xl">
+                {(wedding as { approval_status?: string | null }).approval_status === "rejected"
+                  ? "Site não liberado"
+                  : "Site aguardando liberação"}
+              </CardTitle>
+              <CardDescription>
+                {(wedding as { approval_note?: string | null }).approval_note ||
+                  "Você já pode montar tudo por aqui. Assim que a equipe liberar, o site fica visível para os convidados e a lista de presentes começa a receber pagamentos."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline">
+                <a
+                  href={whatsappLink(
+                    `Olá! Sou dos noivos ${wedding.bride_name} e ${wedding.groom_name} e gostaria de liberar nosso site.`,
+                  )}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Falar sobre a liberação
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
+
         <Tabs defaultValue="content" className="mt-8">
           <TabsList>
             <TabsTrigger value="content">Nosso site</TabsTrigger>
             <TabsTrigger value="photos">Fotos</TabsTrigger>
             <TabsTrigger value="announcements">Avisos</TabsTrigger>
+            <TabsTrigger value="notifications">Novidades</TabsTrigger>
             <TabsTrigger value="gifts">Presentes</TabsTrigger>
             <TabsTrigger value="orders">Pedidos</TabsTrigger>
             <TabsTrigger value="rsvps">Confirmações</TabsTrigger>
@@ -335,6 +367,10 @@ function CouplePanel() {
 
           <TabsContent value="announcements" className="mt-6">
             <AnnouncementsTab weddingId={weddingId} />
+          </TabsContent>
+
+          <TabsContent value="notifications" className="mt-6">
+            <NotificationsTab weddingId={weddingId} />
           </TabsContent>
 
           <TabsContent value="gifts" className="mt-6 space-y-6">

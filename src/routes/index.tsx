@@ -102,6 +102,9 @@ function Home() {
           </p>
           <div className="mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap">
             <Button asChild size="lg">
+              <Link to="/criar-conta">Criar o site do casamento</Link>
+            </Button>
+            <Button asChild size="lg" variant="secondary">
               <Link to="/auth">Entrar</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
@@ -219,8 +222,19 @@ function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-border/70 py-8 text-center text-sm text-muted-foreground">
-        {BRAND.full} · WhatsApp {BRAND.phoneDisplay}
+      <footer className="space-y-2 border-t border-border/70 py-8 text-center text-sm text-muted-foreground">
+        <p>
+          {BRAND.full} · WhatsApp {BRAND.phoneDisplay}
+        </p>
+        <p>
+          <Link to="/termos" className="underline">
+            Termos de uso
+          </Link>{" "}
+          ·{" "}
+          <Link to="/privacidade" className="underline">
+            Política de privacidade
+          </Link>
+        </p>
       </footer>
     </div>
   );

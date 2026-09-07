@@ -10,3 +10,7 @@
 - [x] Banco: convidado não pode mais criar nem alterar pedidos direto pelo navegador
 - [x] Comissão por casamento registrada em cada pedido (commission_cents) visível no super admin
 - [ ] Fluxo de repasse aos noivos: descontar comissão e registrar valores a repassar (manual por enquanto)
+- [x] Termos de uso e Política de privacidade (LGPD) públicos, com links no rodapé, login e cadastro
+- [x] Cadastro self-service dos noivos (/criar-conta) criando o próprio casamento e virando dono
+- [x] Central de novidades no painel dos noivos (presente pago / confirmação) + envio de resumo no WhatsApp
+- [ ] Teste ponta a ponta com dinheiro real (o dono do site fará)
