@@ -52,6 +52,7 @@ function SuperAdminPage() {
   const { isSuperAdmin, isLoading } = useMyRoles(user?.id);
   const queryClient = useQueryClient();
   const [isClaimingAdmin, setIsClaimingAdmin] = useState(false);
+  const [invitesFor, setInvitesFor] = useState<string | null>(null);
 
   const weddingsQuery = useQuery({
     queryKey: ["admin", "weddings"],
@@ -346,7 +347,26 @@ function SuperAdminPage() {
                         >
                           <Trash2 className="size-4" /> Remover casamento
                         </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setInvitesFor(invitesFor === w.id ? null : w.id)}
+                        >
+                          <UserPlus className="size-4" />
+                          {invitesFor === w.id ? "Fechar links de acesso" : "Links de acesso deste casamento"}
+                        </Button>
                       </div>
+
+                      {invitesFor === w.id ? (
+                        <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
+                          <InviteManager
+                            weddingId={w.id}
+                            roles={["owner", "guest"]}
+                            title={`Links de ${w.bride_name} & ${w.groom_name}`}
+                            description="Quem abrir um link de noivos vira responsável por este casamento. O link de convidado libera a navegação e a lista de presentes."
+                          />
+                        </div>
+                      ) : null}
                     </CardContent>
                   </Card>
                 );
@@ -463,7 +483,8 @@ function SuperAdminPage() {
           <TabsContent value="invites" className="mt-6">
             <InviteManager
               roles={["owner", "guest"]}
-              description="Perfil noivos libera a área de edição; perfil convidado libera a navegação e a lista de presentes."
+              title="Link avulso (sem casamento vinculado)"
+              description="Use quando quiser que o próprio casal crie o casamento dele: o link de noivos libera o acesso e a pessoa monta o casamento do zero. Para vincular a um casamento já existente, use o botão “Links de acesso deste casamento” na aba Casamentos."
             />
           </TabsContent>
 

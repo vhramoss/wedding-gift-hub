@@ -30,19 +30,34 @@ function RedeemInvitePage() {
   const [state, setState] = useState<"loading" | "ok" | "error">("loading");
   const [role, setRole] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [needsWedding, setNeedsWedding] = useState(false);
 
   useEffect(() => {
     let active = true;
-    supabase.rpc("redeem_invite", { _token: token }).then(({ data, error }) => {
+    supabase.rpc("redeem_invite", { _token: token }).then(async ({ data, error }) => {
       if (!active) return;
       if (error) {
         setState("error");
         setMessage(error.message);
         return;
       }
-      setRole(data as string);
+      const redeemedRole = data as string;
+      setRole(redeemedRole);
+      if (redeemedRole === "owner") {
+        const { data: auth } = await supabase.auth.getUser();
+        if (auth.user) {
+          const { data: mine } = await supabase
+            .from("weddings")
+            .select("id")
+            .eq("owner_id", auth.user.id)
+            .limit(1);
+          if (active) setNeedsWedding((mine ?? []).length === 0);
+        }
+      }
+      if (!active) return;
       setState("ok");
       queryClient.invalidateQueries({ queryKey: ["my-roles"] });
+      queryClient.invalidateQueries({ queryKey: ["my-wedding"] });
     });
     return () => {
       active = false;
@@ -60,7 +75,9 @@ function RedeemInvitePage() {
               {state === "loading" && "Validando seu convite..."}
               {state === "ok" &&
                 (role === "owner"
-                  ? "Acesso liberado como noivos."
+                  ? needsWedding
+                    ? "Acesso liberado como noivos. Agora é só criar o casamento de vocês."
+                    : "Acesso liberado como noivos. O casamento já está vinculado à sua conta."
                   : role === "admin"
                     ? "Acesso liberado como super administrador."
                     : "Acesso liberado como convidado.")}
@@ -73,10 +90,17 @@ function RedeemInvitePage() {
             {state === "ok" && (
               <Button
                 onClick={() =>
-                  navigate({ to: role === "guest" ? "/" : "/painel", replace: true })
+                  navigate({
+                    to: role === "guest" ? "/" : needsWedding ? "/criar-conta" : "/painel",
+                    replace: true,
+                  })
                 }
               >
-                {role === "guest" ? "Ir para o site" : "Ir para a área dos noivos"}
+                {role === "guest"
+                  ? "Ir para o site"
+                  : needsWedding
+                    ? "Criar nosso casamento"
+                    : "Ir para a área dos noivos"}
               </Button>
             )}
             {state === "error" && (
