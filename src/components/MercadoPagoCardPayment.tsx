@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -79,7 +79,6 @@ export default function MercadoPagoCardPayment({
   submitRef.current = onSubmit;
   errorRef.current = onError;
 
-  const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
@@ -92,7 +91,6 @@ export default function MercadoPagoCardPayment({
     let controller: { unmount?: () => void } | null = null;
     let cancelled = false;
     let readyTimeout: number | undefined;
-    setReady(false);
     setFailed(null);
 
     (async () => {
@@ -118,10 +116,7 @@ export default function MercadoPagoCardPayment({
           },
           callbacks: {
             onReady: () => {
-              if (!cancelled) {
-                window.clearTimeout(readyTimeout);
-                setReady(true);
-              }
+              if (!cancelled) window.clearTimeout(readyTimeout);
             },
             onError: (e: unknown) => {
               const msg =
@@ -192,13 +187,9 @@ export default function MercadoPagoCardPayment({
             Tentar carregar novamente
           </Button>
         </div>
-      ) : !ready ? (
-        <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
-          <Loader2 className="size-5 animate-spin text-primary" />
-          <span>Carregando os campos seguros do cartão…</span>
-        </div>
       ) : null}
       <div id={containerId} className={failed ? "hidden" : "block"} />
+
     </div>
   );
 }
