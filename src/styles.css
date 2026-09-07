@@ -19,8 +19,8 @@
  */
 
 @theme inline {
-  --font-display: "Cormorant Garamond", Georgia, serif;
-  --font-sans: "Jost", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-src);
+  --font-sans: var(--font-sans-src);
   --shadow-soft: 0 18px 45px -25px oklch(0.35 0.05 150 / 0.45);
   --shadow-card: 0 8px 30px -18px oklch(0.35 0.05 150 / 0.35);
   --radius-sm: calc(var(--radius) - 4px);
@@ -67,6 +67,8 @@
 }
 
 :root {
+  --font-display-src: "Cormorant Garamond", Georgia, serif;
+  --font-sans-src: "Jost", ui-sans-serif, system-ui, sans-serif;
   --radius: 0.75rem;
   --background: oklch(0.985 0.009 88);
   --foreground: oklch(0.26 0.026 155);

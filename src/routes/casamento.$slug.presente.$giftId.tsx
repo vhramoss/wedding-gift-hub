@@ -395,6 +395,7 @@ function CheckoutPage() {
               <MercadoPagoCardPayment
                 publicKey={mpPublicKey}
                 amount={cardOrder.totalCents / 100}
+                maxInstallments={method === "credit" ? installments : 1}
                 onSubmit={submitCard}
                 onError={(m) => toast.error("Erro no cartão", { description: m })}
               />

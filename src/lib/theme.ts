@@ -141,7 +141,9 @@ export function themeStyle(wedding: WeddingTheme | null | undefined): CSSPropert
     "--ring": t.primary,
     "--color-ring": t.primary,
     "--font-display": `"${t.fontDisplay}", Georgia, serif`,
+    "--font-display-src": `"${t.fontDisplay}", Georgia, serif`,
     "--font-sans": `"${t.fontBody}", ui-sans-serif, system-ui, sans-serif`,
+    "--font-sans-src": `"${t.fontBody}", ui-sans-serif, system-ui, sans-serif`,
     "--hero-gradient": [
       `radial-gradient(circle at 15% 10%, ${mix(t.accent, "transparent", 35)}, transparent 45%)`,
       `radial-gradient(circle at 85% 0%, ${mix(t.primary, "transparent", 22)}, transparent 40%)`,
