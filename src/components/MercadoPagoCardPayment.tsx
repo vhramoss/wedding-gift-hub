@@ -27,18 +27,36 @@ export default function MercadoPagoCardPayment({
   onError,
 }: Props) {
   const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   const initRef = useRef(false);
 
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
+    if (!publicKey) {
+      setFailed("Chave pública do Mercado Pago não configurada.");
+      return;
+    }
     try {
-      initMercadoPago(publicKey);
+      initMercadoPago(publicKey, { locale: "pt-BR" });
       setReady(true);
     } catch (e) {
-      onError?.(e instanceof Error ? e.message : "Falha ao iniciar Mercado Pago");
+      setFailed(e instanceof Error ? e.message : "Falha ao iniciar Mercado Pago");
     }
-  }, [publicKey, onError]);
+  }, [publicKey]);
+
+  if (failed) {
+    return (
+      <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-6 text-sm">
+        <p className="font-medium">Não foi possível carregar o formulário do cartão.</p>
+        <p className="mt-1 text-muted-foreground">
+          As credenciais de cartão do Mercado Pago precisam ser revisadas pelo
+          administrador do site. Você ainda pode presentear pelo Pix.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">{failed}</p>
+      </div>
+    );
+  }
 
   if (!ready) {
     return (
@@ -51,6 +69,14 @@ export default function MercadoPagoCardPayment({
   return (
     <CardPayment
       initialization={{ amount }}
+      onError={(e) => {
+        setFailed(
+          typeof e === "object" && e && "message" in e
+            ? String((e as { message?: unknown }).message)
+            : "Erro ao carregar o formulário do cartão.",
+        );
+        onError?.("Formulário do cartão indisponível.");
+      }}
       onSubmit={async (param) => {
         const token = param.token;
         if (!token) {
@@ -66,4 +92,5 @@ export default function MercadoPagoCardPayment({
       }}
     />
   );
+
 }
