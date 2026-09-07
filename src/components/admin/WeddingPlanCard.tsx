@@ -21,6 +21,7 @@ export type WeddingPlanFields = {
   plan_started_on?: string | null;
   plan_notes?: string | null;
   commission_percent?: number | string | null;
+  commission_paid_by?: string | null;
 };
 
 const PLAN_LABEL: Record<string, string> = {
@@ -46,6 +47,7 @@ export function WeddingPlanCard({ wedding }: { wedding: WeddingPlanFields }) {
   const [startedOn, setStartedOn] = useState(wedding.plan_started_on ?? "");
   const [notes, setNotes] = useState(wedding.plan_notes ?? "");
   const [commission, setCommission] = useState(String(Number(wedding.commission_percent ?? 0)));
+  const [paidBy, setPaidBy] = useState(wedding.commission_paid_by ?? "couple");
   const [note, setNote] = useState(wedding.approval_note ?? "");
 
   const invalidate = () => {
@@ -80,6 +82,7 @@ export function WeddingPlanCard({ wedding }: { wedding: WeddingPlanFields }) {
         ...(startedOn ? { _started_on: startedOn } : {}),
         ...(notes ? { _notes: notes } : {}),
         _commission_percent: Number(commission.replace(",", ".")) || 0,
+        _commission_paid_by: paidBy,
       });
       if (error) throw error;
     },
@@ -104,6 +107,11 @@ export function WeddingPlanCard({ wedding }: { wedding: WeddingPlanFields }) {
                 plan === "hybrid" ? ` + ${Number(commission) || 0}% por presente` : ""
               }`}
         </span>
+        {plan !== "fixed" ? (
+          <Badge variant="secondary">
+            {paidBy === "guest" ? "Taxa paga pelo convidado" : "Taxa descontada dos noivos"}
+          </Badge>
+        ) : null}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -185,6 +193,23 @@ export function WeddingPlanCard({ wedding }: { wedding: WeddingPlanFields }) {
             onChange={(e) => setCommission(e.target.value)}
             disabled={plan === "fixed"}
           />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`paidby-${wedding.id}`}>Quem paga a taxa</Label>
+          <select
+            id={`paidby-${wedding.id}`}
+            className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm"
+            value={paidBy}
+            onChange={(e) => setPaidBy(e.target.value)}
+            disabled={plan === "fixed"}
+          >
+            <option value="couple">Os noivos (descontada do presente)</option>
+            <option value="guest">O convidado (somada no total)</option>
+          </select>
+          <p className="text-muted-foreground text-xs">
+            Com “o convidado”, um presente de R$ 100 vira R$ {(100 * (1 + (Number(commission.replace(",", ".")) || 0) / 100)).toFixed(2).replace(".", ",")} no
+            pagamento e os noivos recebem os R$ 100 cheios.
+          </p>
         </div>
         <div className="space-y-2">
           <Label htmlFor={`start-${wedding.id}`}>Início do contrato</Label>

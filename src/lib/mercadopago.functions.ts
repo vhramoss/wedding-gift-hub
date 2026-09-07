@@ -91,7 +91,7 @@ async function resolveCollector(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   weddingId: string,
-  totalCents: number,
+  commissionCents: number,
 ): Promise<{
   accessToken: string;
   split: boolean;
@@ -149,14 +149,8 @@ async function resolveCollector(
     }
   }
 
-  // Comissão da plataforma definida por casamento.
-  const { data: wedding } = await supabase
-    .from("weddings")
-    .select("commission_percent")
-    .eq("id", weddingId)
-    .maybeSingle();
-  const pct = Number(wedding?.commission_percent ?? 0);
-  const fee = Math.max(0, Math.round((totalCents * pct) / 100));
+  // Comissão da plataforma já calculada no pedido (create_gift_order).
+  const fee = Math.max(0, Math.round(commissionCents));
 
   return {
     accessToken,
@@ -291,7 +285,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
 
     const { data: order, error } = await supabase
       .from("orders")
-      .select("id, gift_id, wedding_id, user_id, payment_method, status, total_cents, gifts(name)")
+      .select("id, gift_id, wedding_id, user_id, payment_method, status, total_cents, commission_cents, gifts(name)")
       .eq("id", data.orderId)
       .maybeSingle();
     if (error) throw error;
@@ -303,7 +297,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
     const collector = await resolveCollector(
       supabase,
       order.wedding_id,
-      order.total_cents,
+      order.commission_cents ?? 0,
     );
 
     const payment = await mpCreatePayment(
@@ -378,7 +372,7 @@ export const processCardPayment = createServerFn({ method: "POST" })
 
     const { data: order, error } = await supabase
       .from("orders")
-      .select("id, gift_id, wedding_id, user_id, payment_method, status, total_cents, installments, gifts(name)")
+      .select("id, gift_id, wedding_id, user_id, payment_method, status, total_cents, commission_cents, installments, gifts(name)")
       .eq("id", data.orderId)
       .maybeSingle();
     if (error) throw error;
@@ -395,7 +389,7 @@ export const processCardPayment = createServerFn({ method: "POST" })
     const collector = await resolveCollector(
       supabase,
       order.wedding_id,
-      order.total_cents,
+      order.commission_cents ?? 0,
     );
 
     const payment = await mpCreatePayment(

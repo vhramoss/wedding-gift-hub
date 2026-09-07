@@ -759,6 +759,7 @@ export type Database = {
           ceremony_map_url: string | null
           ceremony_time: string | null
           ceremony_venue: string | null
+          commission_paid_by: string
           commission_percent: number
           cover_image_url: string | null
           created_at: string
@@ -810,6 +811,7 @@ export type Database = {
           ceremony_map_url?: string | null
           ceremony_time?: string | null
           ceremony_venue?: string | null
+          commission_paid_by?: string
           commission_percent?: number
           cover_image_url?: string | null
           created_at?: string
@@ -861,6 +863,7 @@ export type Database = {
           ceremony_map_url?: string | null
           ceremony_time?: string | null
           ceremony_venue?: string | null
+          commission_paid_by?: string
           commission_percent?: number
           cover_image_url?: string | null
           created_at?: string
@@ -1024,19 +1027,34 @@ export type Database = {
         Args: { _note?: string; _status: string; _wedding_id: string }
         Returns: undefined
       }
-      set_wedding_plan: {
-        Args: {
-          _billing: string
-          _commission_percent?: number
-          _fee_cents: number
-          _notes?: string
-          _paid: boolean
-          _plan: string
-          _started_on?: string
-          _wedding_id: string
-        }
-        Returns: undefined
-      }
+      set_wedding_plan:
+        | {
+            Args: {
+              _billing: string
+              _commission_percent?: number
+              _fee_cents: number
+              _notes?: string
+              _paid: boolean
+              _plan: string
+              _started_on?: string
+              _wedding_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _billing: string
+              _commission_paid_by?: string
+              _commission_percent?: number
+              _fee_cents: number
+              _notes?: string
+              _paid: boolean
+              _plan: string
+              _started_on?: string
+              _wedding_id: string
+            }
+            Returns: undefined
+          }
       wedding_donors: {
         Args: { _wedding_id: string }
         Returns: {

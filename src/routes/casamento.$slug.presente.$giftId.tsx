@@ -111,7 +111,9 @@ function CheckoutPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("gifts")
-        .select("*, weddings!inner(id, slug, bride_name, groom_name)")
+        .select(
+          "*, weddings!inner(id, slug, bride_name, groom_name, commission_percent, commission_paid_by)",
+        )
         .eq("id", giftId)
         .maybeSingle();
       if (error) throw error;
@@ -139,9 +141,16 @@ function CheckoutPage() {
   const sharesLeft = Math.max(0, sharesTotal - (gift?.purchased_count ?? 0));
   const baseCents = sharesTotal > 1 ? sharePriceCents * shares : (gift?.price_cents ?? 0);
 
+  // Taxa de serviço repassada ao convidado (quando o casal escolhe esse modelo).
+  const serviceCents =
+    wedding?.commission_paid_by === "guest"
+      ? Math.max(0, Math.round((baseCents * Number(wedding.commission_percent ?? 0)) / 100))
+      : 0;
+  const chargeBase = baseCents + serviceCents;
+
   const charge = useMemo(
-    () => computeCharge(baseCents, method, installments),
-    [baseCents, method, installments],
+    () => computeCharge(chargeBase, method, installments),
+    [chargeBase, method, installments],
   );
 
   // --- Pix ---
@@ -538,7 +547,7 @@ function CheckoutPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => {
-                      const c = computeCharge(baseCents, "credit", n);
+                      const c = computeCharge(chargeBase, "credit", n);
                       return (
                         <SelectItem key={n} value={String(n)}>
                           {n}x de {formatBRL(c.installmentCents)}
@@ -607,9 +616,19 @@ function CheckoutPage() {
               </span>
               <span>{formatBRL(baseCents)}</span>
             </div>
+            {serviceCents > 0 ? (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Taxa de serviço</span>
+                <span>{formatBRL(serviceCents)}</span>
+              </div>
+            ) : null}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Taxa de parcelamento</span>
-              <span>{charge.feeCents ? formatBRL(charge.feeCents) : "Isento"}</span>
+              <span>
+                {charge.totalCents - chargeBase
+                  ? formatBRL(charge.totalCents - chargeBase)
+                  : "Isento"}
+              </span>
             </div>
             <Separator />
             <div className="flex items-baseline justify-between">
