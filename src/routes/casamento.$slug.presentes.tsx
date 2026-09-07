@@ -90,7 +90,13 @@ function GiftsPage() {
       ) : (
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((gift) => {
-            const soldOut = gift.quantity > 0 && gift.purchased_count >= gift.quantity;
+            const sharesTotal = Math.max(1, gift.shares_total ?? 1);
+            const sharesLeft = Math.max(0, sharesTotal - gift.purchased_count);
+            const sharePrice = Math.ceil(gift.price_cents / sharesTotal);
+            const soldOut =
+              sharesTotal > 1
+                ? sharesLeft === 0
+                : gift.quantity > 0 && gift.purchased_count >= gift.quantity;
             return (
               <Card key={gift.id} className="shadow-card overflow-hidden border-border/70 pt-0">
                 <div className="h-48 w-full bg-secondary/60">
@@ -118,15 +124,35 @@ function GiftsPage() {
                     <p className="text-sm text-muted-foreground">{gift.description}</p>
                   ) : null}
                   <p className="mt-1 font-display text-3xl text-primary">
-                    {formatBRL(gift.price_cents)}
+                    {formatBRL(sharesTotal > 1 ? sharePrice : gift.price_cents)}
                   </p>
+                  {sharesTotal > 1 ? (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        Por cota · {formatBRL(gift.price_cents)} no total ·{" "}
+                        {sharesTotal - sharesLeft} de {sharesTotal} cotas presenteadas
+                      </p>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                        <div
+                          className="h-full rounded-full bg-accent"
+                          style={{
+                            width: `${Math.round(((sharesTotal - sharesLeft) / sharesTotal) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
                   <Button asChild disabled={soldOut} className="mt-2">
                     <Link
                       to="/casamento/$slug/presente/$giftId"
                       params={{ slug, giftId: gift.id }}
                       disabled={soldOut}
                     >
-                      {soldOut ? "Já presenteado" : "Presentear"}
+                      {soldOut
+                        ? "Já presenteado"
+                        : sharesTotal > 1
+                          ? "Presentear uma cota"
+                          : "Presentear"}
                     </Link>
                   </Button>
                 </CardContent>

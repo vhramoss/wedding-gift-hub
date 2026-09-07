@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ExternalLink, Plus, Trash2 } from "lucide-react";
+import { Download, ExternalLink, Plus, Trash2 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -21,6 +21,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PaymentAccountTab } from "@/components/painel/PaymentAccountTab";
+import { PayoutSummary } from "@/components/painel/PayoutSummary";
+import { downloadCsv } from "@/lib/csv";
 import { useSession } from "@/hooks/useSession";
 import { useMyRoles } from "@/hooks/useRoles";
 import { useMyWedding } from "@/hooks/useMyWedding";
@@ -158,6 +160,7 @@ function CouplePanel() {
         image_url: String(form.get("image") ?? "").trim() || null,
         price_cents: priceCents,
         quantity: Math.max(1, Number(form.get("quantity") ?? 1)),
+        shares_total: Math.max(1, Number(form.get("shares_total") ?? 1)),
       });
       if (error) throw error;
     },
@@ -367,6 +370,21 @@ function CouplePanel() {
                     <Label htmlFor="quantity">Quantidade</Label>
                     <Input id="quantity" name="quantity" type="number" min={1} defaultValue={1} />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="shares_total">Dividir em cotas</Label>
+                    <Input
+                      id="shares_total"
+                      name="shares_total"
+                      type="number"
+                      min={1}
+                      max={100}
+                      defaultValue={1}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Use 1 para presente inteiro. Acima disso, vários convidados podem dividir o
+                      valor.
+                    </p>
+                  </div>
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="image">URL da imagem (opcional)</Label>
                     <Input id="image" name="image" placeholder="https://..." />
@@ -391,7 +409,9 @@ function CouplePanel() {
                     <div className="min-w-0">
                       <h3 className="break-words text-lg">{gift.name}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {formatBRL(gift.price_cents)} · {gift.purchased_count}/{gift.quantity}{" "}
+                        {formatBRL(gift.price_cents)} · {gift.purchased_count}/
+                        {(gift.shares_total ?? 1) > 1 ? gift.shares_total : gift.quantity}{" "}
+                        {(gift.shares_total ?? 1) > 1 ? "cotas · " : ""}
                         presenteado(s)
                       </p>
                     </div>
@@ -417,9 +437,48 @@ function CouplePanel() {
               </CardContent>
             </Card>
 
+            <PayoutSummary weddingId={weddingId} />
+
             <Card className="shadow-card">
               <CardContent className="space-y-4">
-                <h3 className="text-lg font-medium">Quem presenteou</h3>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-lg font-medium">Quem presenteou</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      downloadCsv(
+                        "quem-presenteou.csv",
+                        [
+                          "Convidado",
+                          "Presente",
+                          "E-mail",
+                          "Telefone",
+                          "Valor",
+                          "Forma",
+                          "Parcelas",
+                          "Situação",
+                          "Recado",
+                          "Data",
+                        ],
+                        (donorsQuery.data ?? []).map((d) => [
+                          d.guest_name,
+                          d.gift_name ?? "",
+                          d.guest_email ?? "",
+                          d.guest_phone ?? "",
+                          formatBRL(d.total_cents),
+                          PAYMENT_LABELS[d.payment_method as PaymentMethod] ?? d.payment_method,
+                          d.installments,
+                          d.status,
+                          d.message ?? "",
+                          new Date(d.paid_at ?? d.created_at).toLocaleString("pt-BR"),
+                        ]),
+                      )
+                    }
+                  >
+                    <Download className="size-4" /> Exportar planilha
+                  </Button>
+                </div>
                 {(donorsQuery.data ?? []).filter((d) => d.status === "paid").length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     Nenhum presente pago ainda.
@@ -508,6 +567,39 @@ function CouplePanel() {
           </TabsContent>
 
           <TabsContent value="rsvps" className="mt-6 space-y-4">
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  downloadCsv(
+                    "confirmacoes.csv",
+                    [
+                      "Convidado",
+                      "Vai ao casamento",
+                      "Cerimônia",
+                      "Festa",
+                      "Acompanhantes",
+                      "Restrição alimentar",
+                      "Recado",
+                      "Data",
+                    ],
+                    (rsvpsQuery.data ?? []).map((r) => [
+                      r.guest_name || "Convidado",
+                      r.attending ? "Sim" : "Não",
+                      r.attending_ceremony ? "Sim" : "Não",
+                      r.attending_party ? "Sim" : "Não",
+                      r.companions,
+                      r.dietary_notes ?? "",
+                      r.message ?? "",
+                      new Date(r.created_at).toLocaleString("pt-BR"),
+                    ]),
+                  )
+                }
+              >
+                <Download className="size-4" /> Exportar planilha
+              </Button>
+            </div>
             {(rsvpsQuery.data ?? []).map((rsvp) => (
               <Card key={rsvp.id}>
                 <CardContent className="flex flex-wrap items-center justify-between gap-4">
@@ -519,6 +611,17 @@ function CouplePanel() {
                     <p className="mt-2 text-sm text-muted-foreground">
                       Acompanhantes: {rsvp.companions}
                     </p>
+                    {rsvp.attending ? (
+                      <p className="text-sm text-muted-foreground">
+                        Cerimônia: {rsvp.attending_ceremony ? "sim" : "não"} · Festa:{" "}
+                        {rsvp.attending_party ? "sim" : "não"}
+                      </p>
+                    ) : null}
+                    {rsvp.dietary_notes ? (
+                      <p className="text-sm text-muted-foreground">
+                        Restrição alimentar: {rsvp.dietary_notes}
+                      </p>
+                    ) : null}
                     {rsvp.message ? (
                       <p className="mt-1 text-sm italic text-muted-foreground">“{rsvp.message}”</p>
                     ) : null}

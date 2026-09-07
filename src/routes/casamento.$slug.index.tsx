@@ -5,23 +5,47 @@ import { Gift, HeartHandshake, MapPin, Megaphone, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { countdownParts, formatWeddingDate, useWedding } from "@/hooks/useWedding";
+import { getWeddingPreview } from "@/lib/wedding-public.functions";
 
 export const Route = createFileRoute("/casamento/$slug/")({
-  head: ({ params }) => ({
-    meta: [
-      { title: `Casamento de ${params.slug.replace(/-/g, " ")}` },
-      {
-        name: "description",
-        content:
-          "Save the date com contagem regressiva, nossa história, cerimônia e festa, padrinhos, recados, lista de presentes e confirmação de presença.",
-      },
-      { property: "og:title", content: `Casamento · ${params.slug.replace(/-/g, " ")}` },
-      {
-        property: "og:description",
-        content: "Conheça a história do casal, confirme presença e escolha um presente.",
-      },
-    ],
-  }),
+  loader: ({ params }) => getWeddingPreview({ data: { slug: params.slug } }),
+  head: ({ params, loaderData }) => {
+    const couple = loaderData
+      ? `${loaderData.bride_name} & ${loaderData.groom_name}`
+      : params.slug.replace(/-/g, " ");
+    const description =
+      loaderData?.tagline ||
+      loaderData?.welcome_message ||
+      "Save the date com contagem regressiva, nossa história, cerimônia e festa, padrinhos, recados, lista de presentes e confirmação de presença.";
+    const cover = loaderData?.cover_image_url;
+    const isAbsolute = typeof cover === "string" && cover.startsWith("https://");
+    return {
+      meta: [
+        { title: `Casamento de ${couple}` },
+        { name: "description", content: description.slice(0, 155) },
+        { property: "og:title", content: `Casamento de ${couple}` },
+        { property: "og:description", content: description.slice(0, 155) },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
+        ...(isAbsolute
+          ? [
+              { property: "og:image", content: cover },
+              { name: "twitter:image", content: cover },
+            ]
+          : []),
+      ],
+    };
+  },
+  errorComponent: () => (
+    <div className="mx-auto max-w-xl p-16 text-center text-muted-foreground">
+      Não foi possível carregar esta página agora. Atualize para tentar de novo.
+    </div>
+  ),
+  notFoundComponent: () => (
+    <div className="mx-auto max-w-xl p-16 text-center text-muted-foreground">
+      Casamento não encontrado.
+    </div>
+  ),
   component: WeddingHome,
 });
 

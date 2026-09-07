@@ -248,6 +248,7 @@ export const createGiftOrder = createServerFn({ method: "POST" })
         giftId: z.string().uuid(),
         method: z.enum(["pix", "debit", "credit"]),
         installments: z.number().int().min(1).max(12).default(1),
+        shares: z.number().int().min(1).max(100).default(1),
         message: z.string().max(500).optional().default(""),
       })
       .parse(data),
@@ -259,6 +260,7 @@ export const createGiftOrder = createServerFn({ method: "POST" })
       p_method: data.method,
       p_installments: data.installments,
       p_message: data.message,
+      p_shares: data.shares,
     });
     if (error) throw error;
     const row = (result ?? []) as {

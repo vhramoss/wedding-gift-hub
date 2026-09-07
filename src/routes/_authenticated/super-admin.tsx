@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PayoutsTab } from "@/components/admin/PayoutsTab";
 import { useSession } from "@/hooks/useSession";
 import { useMyRoles, type AppRole } from "@/hooks/useRoles";
 import { formatBRL } from "@/lib/br";
@@ -248,6 +249,7 @@ function SuperAdminPage() {
             <TabsTrigger value="weddings">Casamentos</TabsTrigger>
             <TabsTrigger value="commissions">Comissões</TabsTrigger>
             <TabsTrigger value="accounts">Contas por casamento</TabsTrigger>
+            <TabsTrigger value="payouts">Repasses</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
             <TabsTrigger value="invites">Convites</TabsTrigger>
             <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
@@ -425,6 +427,10 @@ function SuperAdminPage() {
 
           <TabsContent value="accounts" className="mt-6">
             <AccountsByWeddingTab />
+          </TabsContent>
+
+          <TabsContent value="payouts" className="mt-6">
+            <PayoutsTab />
           </TabsContent>
 
           <TabsContent value="users" className="mt-6 space-y-3">

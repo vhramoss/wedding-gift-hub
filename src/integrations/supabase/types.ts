@@ -41,6 +41,7 @@ export type Database = {
           price_cents: number
           purchased_count: number
           quantity: number
+          shares_total: number
           updated_at: string
           wedding_id: string
         }
@@ -55,6 +56,7 @@ export type Database = {
           price_cents: number
           purchased_count?: number
           quantity?: number
+          shares_total?: number
           updated_at?: string
           wedding_id: string
         }
@@ -69,6 +71,7 @@ export type Database = {
           price_cents?: number
           purchased_count?: number
           quantity?: number
+          shares_total?: number
           updated_at?: string
           wedding_id?: string
         }
@@ -102,6 +105,7 @@ export type Database = {
           pix_qr_base64: string | null
           provider: string
           seller_mp_user_id: number | null
+          shares: number
           status: string
           total_cents: number
           updated_at: string
@@ -127,6 +131,7 @@ export type Database = {
           pix_qr_base64?: string | null
           provider?: string
           seller_mp_user_id?: number | null
+          shares?: number
           status?: string
           total_cents: number
           updated_at?: string
@@ -152,6 +157,7 @@ export type Database = {
           pix_qr_base64?: string | null
           provider?: string
           seller_mp_user_id?: number | null
+          shares?: number
           status?: string
           total_cents?: number
           updated_at?: string
@@ -205,8 +211,11 @@ export type Database = {
       rsvps: {
         Row: {
           attending: boolean
+          attending_ceremony: boolean
+          attending_party: boolean
           companions: number
           created_at: string
+          dietary_notes: string | null
           guest_name: string
           id: string
           message: string | null
@@ -216,8 +225,11 @@ export type Database = {
         }
         Insert: {
           attending: boolean
+          attending_ceremony?: boolean
+          attending_party?: boolean
           companions?: number
           created_at?: string
+          dietary_notes?: string | null
           guest_name?: string
           id?: string
           message?: string | null
@@ -227,8 +239,11 @@ export type Database = {
         }
         Update: {
           attending?: boolean
+          attending_ceremony?: boolean
+          attending_party?: boolean
           companions?: number
           created_at?: string
+          dietary_notes?: string | null
           guest_name?: string
           id?: string
           message?: string | null
@@ -563,6 +578,50 @@ export type Database = {
           },
         ]
       }
+      wedding_payouts: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          created_by: string | null
+          id: string
+          method: string
+          notes: string | null
+          paid_at: string
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method?: string
+          notes?: string | null
+          paid_at?: string
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method?: string
+          notes?: string | null
+          paid_at?: string
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_payouts_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wedding_people: {
         Row: {
           created_at: string
@@ -806,6 +865,7 @@ export type Database = {
           p_installments: number
           p_message: string
           p_method: string
+          p_shares?: number
         }
         Returns: {
           installments: number
@@ -906,6 +966,16 @@ export type Database = {
           connected_at: string
           live_mode: boolean
           mp_user_id: number
+        }[]
+      }
+      wedding_payout_summary: {
+        Args: { _wedding_id: string }
+        Returns: {
+          commission_cents: number
+          gross_cents: number
+          net_cents: number
+          paid_out_cents: number
+          pending_cents: number
         }[]
       }
     }

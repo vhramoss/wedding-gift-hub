@@ -39,6 +39,9 @@ function RsvpPage() {
   const [guestName, setGuestName] = useState("");
   const [companions, setCompanions] = useState(0);
   const [message, setMessage] = useState("");
+  const [ceremony, setCeremony] = useState(true);
+  const [party, setParty] = useState(true);
+  const [dietary, setDietary] = useState("");
 
   const rsvpQuery = useQuery({
     queryKey: ["rsvp", wedding?.id, user?.id],
@@ -61,6 +64,9 @@ function RsvpPage() {
       setCompanions(rsvpQuery.data.companions);
       setMessage(rsvpQuery.data.message ?? "");
       setGuestName(rsvpQuery.data.guest_name ?? "");
+      setCeremony(rsvpQuery.data.attending_ceremony ?? true);
+      setParty(rsvpQuery.data.attending_party ?? true);
+      setDietary(rsvpQuery.data.dietary_notes ?? "");
     }
   }, [rsvpQuery.data]);
 
@@ -75,6 +81,9 @@ function RsvpPage() {
           attending: willAttend,
           companions: willAttend ? Math.max(0, Math.min(companions, 10)) : 0,
           message: message.trim() || null,
+          attending_ceremony: willAttend ? ceremony : false,
+          attending_party: willAttend ? party : false,
+          dietary_notes: willAttend ? dietary.trim() || null : null,
         },
         { onConflict: "wedding_id,user_id" },
       );
@@ -158,7 +167,39 @@ function RsvpPage() {
               </div>
 
               {attending ? (
-                <div className="space-y-2">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Onde você vai estar</Label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Button
+                        type="button"
+                        variant={ceremony ? "default" : "outline"}
+                        className="flex-1"
+                        onClick={() => setCeremony(!ceremony)}
+                      >
+                        {ceremony ? "Vou à cerimônia" : "Não vou à cerimônia"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={party ? "default" : "outline"}
+                        className="flex-1"
+                        onClick={() => setParty(!party)}
+                      >
+                        {party ? "Vou à festa" : "Não vou à festa"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="dietary">Restrição alimentar (opcional)</Label>
+                    <Input
+                      id="dietary"
+                      value={dietary}
+                      onChange={(e) => setDietary(e.target.value)}
+                      placeholder="Vegetariano, sem glúten, alergia a..."
+                    />
+                  </div>
+
                   <Label htmlFor="companions">Acompanhantes</Label>
                   <Input
                     id="companions"

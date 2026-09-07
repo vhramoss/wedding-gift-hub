@@ -79,6 +79,7 @@ function CheckoutPage() {
   const [method, setMethod] = useState<PaymentMethod>("pix");
   const [installments, setInstallments] = useState(1);
   const [messageToCouple, setMessageToCouple] = useState("");
+  const [shares, setShares] = useState(1);
   const [phase, setPhase] = useState<Phase>("form");
   const [pixData, setPixData] = useState<{
     qrCode: string;
@@ -133,16 +134,21 @@ function CheckoutPage() {
   const mpPublicKey = mpConfig.data?.publicKey ?? "";
 
 
+  const sharesTotal = Math.max(1, gift?.shares_total ?? 1);
+  const sharePriceCents = Math.ceil((gift?.price_cents ?? 0) / sharesTotal);
+  const sharesLeft = Math.max(0, sharesTotal - (gift?.purchased_count ?? 0));
+  const baseCents = sharesTotal > 1 ? sharePriceCents * shares : (gift?.price_cents ?? 0);
+
   const charge = useMemo(
-    () => computeCharge(gift?.price_cents ?? 0, method, installments),
-    [gift?.price_cents, method, installments],
+    () => computeCharge(baseCents, method, installments),
+    [baseCents, method, installments],
   );
 
   // --- Pix ---
   const startPix = useMutation({
     mutationFn: async () => {
       const order = await newOrder({
-        data: { giftId, method: "pix", installments: 1, message: messageToCouple },
+        data: { giftId, method: "pix", installments: 1, shares, message: messageToCouple },
       });
       const res = await createPix({ data: { orderId: order.orderId } });
       return { orderId: order.orderId, ...res };
@@ -172,7 +178,11 @@ function CheckoutPage() {
         .maybeSingle();
       if (active && data?.status === "paid") {
         toast.success("Pagamento confirmado! Obrigado pelo presente.");
-        navigate({ to: "/meus-presentes" });
+        navigate({
+          to: "/casamento/$slug/obrigado",
+          params: { slug },
+          search: { pedido: pixData.orderId },
+        });
       }
     };
     const interval = setInterval(check, 5000);
@@ -181,7 +191,7 @@ function CheckoutPage() {
       active = false;
       clearInterval(interval);
     };
-  }, [phase, pixData, navigate]);
+  }, [phase, pixData, navigate, slug]);
 
   // --- Cartão ---
   const startCard = useMutation({
@@ -191,6 +201,7 @@ function CheckoutPage() {
           giftId,
           method,
           installments: method === "credit" ? installments : 1,
+          shares,
           message: messageToCouple,
         },
       });
@@ -217,7 +228,15 @@ function CheckoutPage() {
       setPhase("result");
       if (res.status === "paid") {
         toast.success("Pagamento aprovado. Obrigado pelo presente!");
-        setTimeout(() => navigate({ to: "/meus-presentes" }), 2500);
+        setTimeout(
+          () =>
+            navigate({
+              to: "/casamento/$slug/obrigado",
+              params: { slug },
+              search: { pedido: cardOrder.id },
+            }),
+          2000,
+        );
       } else if (res.status === "cancelled") {
         toast.error("Pagamento recusado.");
       } else {
@@ -519,7 +538,7 @@ function CheckoutPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => {
-                      const c = computeCharge(gift.price_cents, "credit", n);
+                      const c = computeCharge(baseCents, "credit", n);
                       return (
                         <SelectItem key={n} value={String(n)}>
                           {n}x de {formatBRL(c.installmentCents)}
@@ -537,6 +556,28 @@ function CheckoutPage() {
                   : "Pix é cobrado à vista e confirmado automaticamente."}
               </p>
             )}
+
+            {sharesTotal > 1 ? (
+              <div className="space-y-2">
+                <Label>Quantas cotas você quer presentear?</Label>
+                <Select value={String(shares)} onValueChange={(v) => setShares(Number(v))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: Math.max(1, sharesLeft) }, (_, i) => i + 1).map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n} cota{n > 1 ? "s" : ""} — {formatBRL(sharePriceCents * n)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Este presente é dividido em {sharesTotal} cotas de {formatBRL(sharePriceCents)}.
+                  Restam {sharesLeft}.
+                </p>
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="msg">Recado para os noivos (opcional)</Label>
@@ -561,8 +602,10 @@ function CheckoutPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Valor do presente</span>
-              <span>{formatBRL(gift.price_cents)}</span>
+              <span className="text-muted-foreground">
+                {sharesTotal > 1 ? `${shares} cota(s)` : "Valor do presente"}
+              </span>
+              <span>{formatBRL(baseCents)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Taxa de parcelamento</span>
