@@ -14,7 +14,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMainWedding } from "@/hooks/useMyWedding";
+import { useHomeWedding } from "@/hooks/useMyWedding";
 import { useSession } from "@/hooks/useSession";
 import { useMyRoles } from "@/hooks/useRoles";
 import { BRAND, whatsappLink } from "@/lib/brand";
@@ -65,7 +65,7 @@ const PORTFOLIO = [
 function Home() {
   const { user, loading: loadingSession } = useSession();
   const { isSuperAdmin, isLoading: rolesLoading } = useMyRoles(user?.id);
-  const { data: wedding, isLoading } = useMainWedding();
+  const { data: wedding, isLoading } = useHomeWedding(user?.id);
 
   if (loadingSession || (user && (isLoading || rolesLoading))) {
     return (
