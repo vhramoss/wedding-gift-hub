@@ -68,26 +68,60 @@ async function mpCreatePayment(
     },
     body: JSON.stringify(body),
   });
-  const data = (await res.json()) as MpPaymentResponse & {
+
+  const raw = await res.text();
+  let data: MpPaymentResponse & {
     message?: string;
-    cause?: { description?: string }[];
+    error?: string;
+    cause?: { code?: string | number; description?: string }[];
   };
-  if (!res.ok) {
-    const detail =
-      data.cause?.map((c) => c.description).join("; ") ||
-      data.message ||
-      `Erro Mercado Pago (${res.status})`;
-    throw new Error(detail);
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = {};
   }
+
+  if (!res.ok) {
+    // TEMP DEBUG — log completo só nos Runtime Logs do Vercel (não vai pro
+    // convidado). Ajuda a ver a resposta crua do Mercado Pago sem expor nada
+    // na tela além do resumo abaixo.
+    console.error("[MercadoPago] payment error", res.status, raw);
+
+    const causes = (data.cause ?? [])
+      .map((c) => `${c.code ?? "?"}: ${c.description ?? ""}`)
+      .join(" | ");
+    const detail = [
+      `HTTP ${res.status}`,
+      data.message ? `message: ${data.message}` : null,
+      data.error ? `error: ${data.error}` : null,
+      causes ? `cause: ${causes}` : null,
+    ]
+      .filter(Boolean)
+      .join(" — ");
+
+    throw new Error(detail || `Erro Mercado Pago (${res.status})`);
+  }
+
   return data;
 }
 
 /** Configuração pública repassada ao navegador (public key + status). */
 export const getMercadoPagoConfig = createServerFn({ method: "GET" }).handler(
-  async () => ({
-    enabled: enabled(),
-    publicKey: process.env["MERCADOPAGO_PUBLIC_KEY"] ?? "",
-  }),
+  async () => {
+    // TEMP DEBUG — remover depois de confirmar que o token em produção é o
+    // esperado. Não expõe o token inteiro, só um "fingerprint" pra comparar
+    // com o que está no painel do Mercado Pago sem vazar o segredo.
+    const token = process.env["MERCADOPAGO_ACCESS_TOKEN"] ?? "";
+    const accessTokenFingerprint = token
+      ? `${token.slice(0, 8)}...${token.slice(-4)} (len=${token.length})`
+      : "(vazio)";
+
+    return {
+      enabled: enabled(),
+      publicKey: process.env["MERCADOPAGO_PUBLIC_KEY"] ?? "",
+      accessTokenFingerprint,
+    };
+  },
 );
 
 /**
