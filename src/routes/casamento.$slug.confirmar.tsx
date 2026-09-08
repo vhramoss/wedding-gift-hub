@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { HeartHandshake, Lock, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatWeddingDate, isRsvpOpen, useWedding } from "@/hooks/useWedding";
+import { useSession } from "@/hooks/useSession";
 
 export const Route = createFileRoute("/casamento/$slug/confirmar")({
   head: () => ({
@@ -45,6 +46,7 @@ type Guest = {
 function RsvpPage() {
   const { slug } = Route.useParams();
   const { data: wedding } = useWedding(slug);
+  const { user, loading: loadingSession } = useSession();
 
   const [term, setTerm] = useState("");
   const [results, setResults] = useState<Guest[] | null>(null);
@@ -130,7 +132,19 @@ function RsvpPage() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {!open ? (
+          {loadingSession ? null : !user ? (
+            <div className="space-y-4 rounded-lg border border-border/60 p-5 text-center">
+              <Lock className="mx-auto size-5 text-accent" />
+              <p className="text-sm text-muted-foreground">
+                Para confirmar presença é preciso entrar com sua conta. Assim os noivos sabem
+                exatamente quem respondeu. Ver o site e escolher um presente continua liberado, sem
+                login.
+              </p>
+              <Button asChild>
+                <Link to="/auth">Entrar para confirmar</Link>
+              </Button>
+            </div>
+          ) : !open ? (
             <div className="flex items-start gap-3 rounded-lg border border-border/60 p-4 text-sm text-muted-foreground">
               <Lock className="mt-0.5 size-4 text-accent" />
               <span>

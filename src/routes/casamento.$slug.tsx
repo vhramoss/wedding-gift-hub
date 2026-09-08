@@ -23,17 +23,17 @@ const PAGES = [
   { to: "/casamento/$slug/galeria", label: "Galeria" },
   { to: "/casamento/$slug/avisos", label: "Avisos" },
   { to: "/casamento/$slug/recados", label: "Recados" },
-  { to: "/casamento/$slug/fornecedores", label: "Fornecedores" },
 ] as const;
 
 const linkClass =
   "shrink-0 whitespace-nowrap px-2 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-primary sm:px-3 sm:text-xs sm:tracking-[0.18em]";
 
 const HERO_HEIGHTS: Record<string, string> = {
-  normal: "min-h-[280px] sm:min-h-[360px]",
-  grande: "min-h-[420px] sm:min-h-[560px]",
-  tela: "min-h-[calc(100svh-8rem)]",
+  normal: "min-h-[45svh]",
+  grande: "min-h-[72svh]",
+  tela: "min-h-[100svh]",
 };
+
 
 function WeddingLayout() {
   const { slug } = Route.useParams();
@@ -98,6 +98,10 @@ function WeddingLayout() {
   const date = formatWeddingDate(wedding.wedding_date);
   const opacity = Math.min(100, Math.max(0, wedding.hero_opacity ?? 30)) / 100;
   const heightClass = HERO_HEIGHTS[wedding.hero_height ?? "grande"] ?? HERO_HEIGHTS["grande"];
+  const fitClass = wedding.hero_fit === "inteira" ? "object-contain" : "object-cover";
+  const heroTextStyle = wedding.hero_text_color
+    ? ({ color: wedding.hero_text_color } as const)
+    : undefined;
 
   return (
     <div className="min-h-screen bg-background" style={themeStyle(wedding)}>
@@ -162,16 +166,22 @@ function WeddingLayout() {
             key={src}
             src={src}
             alt={`${wedding.bride_name} e ${wedding.groom_name}`}
-            className="absolute inset-0 size-full object-cover transition-opacity duration-1000"
+            className={`absolute inset-0 size-full ${fitClass} transition-opacity duration-1000`}
             style={{ opacity: i === heroIndex % covers.length ? opacity : 0 }}
           />
         ))}
-        <div className="relative mx-auto max-w-5xl px-4 py-12 text-center sm:py-20">
+        <div className="relative mx-auto max-w-5xl px-4 py-12 text-center sm:py-20" style={heroTextStyle}>
           <h1 className="text-balance-title font-display text-4xl font-semibold sm:text-6xl md:text-7xl">
-            {wedding.bride_name} <span className="text-accent">&</span> {wedding.groom_name}
+            {wedding.bride_name}{" "}
+            <span className={wedding.hero_text_color ? "" : "text-accent"}>&</span>{" "}
+            {wedding.groom_name}
           </h1>
           <div className="divider-gold mx-auto my-5 w-28 sm:my-6 sm:w-40" />
-          <div className="flex flex-col items-center gap-3 text-xs uppercase tracking-[0.16em] text-muted-foreground sm:flex-row sm:flex-wrap sm:justify-center sm:gap-6 sm:text-sm sm:tracking-[0.2em]">
+          <div
+            className={`flex flex-col items-center gap-3 text-xs uppercase tracking-[0.16em] sm:flex-row sm:flex-wrap sm:justify-center sm:gap-6 sm:text-sm sm:tracking-[0.2em] ${
+              wedding.hero_text_color ? "opacity-90" : "text-muted-foreground"
+            }`}
+          >
             {date ? (
               <span className="flex items-center gap-2">
                 <CalendarDays className="size-4" /> {date}
@@ -185,10 +195,16 @@ function WeddingLayout() {
             ) : null}
           </div>
           {wedding.party_address ? (
-            <p className="mt-3 text-sm text-muted-foreground">{wedding.party_address}</p>
+            <p className={`mt-3 text-sm ${wedding.hero_text_color ? "opacity-90" : "text-muted-foreground"}`}>
+              {wedding.party_address}
+            </p>
           ) : null}
           {wedding.tagline ? (
-            <p className="mx-auto mt-6 max-w-2xl whitespace-pre-line text-lg italic leading-relaxed text-muted-foreground">
+            <p
+              className={`mx-auto mt-6 max-w-2xl whitespace-pre-line text-lg italic leading-relaxed ${
+                wedding.hero_text_color ? "opacity-90" : "text-muted-foreground"
+              }`}
+            >
               {wedding.tagline}
             </p>
           ) : null}

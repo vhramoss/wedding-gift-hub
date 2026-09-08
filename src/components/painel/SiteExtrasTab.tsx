@@ -20,6 +20,8 @@ import {
 type Draft = {
   hero_opacity: number;
   hero_height: string;
+  hero_fit: string;
+  hero_text_color: string;
   hero_rotate_seconds: number;
   music_enabled: boolean;
   music_autoplay: boolean;
@@ -30,6 +32,8 @@ type Draft = {
 const EMPTY: Draft = {
   hero_opacity: 30,
   hero_height: "grande",
+  hero_fit: "cobrir",
+  hero_text_color: "",
   hero_rotate_seconds: 7,
   music_enabled: false,
   music_autoplay: true,
@@ -48,7 +52,7 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
       const { data, error } = await supabase
         .from("weddings")
         .select(
-          "id, hero_opacity, hero_height, hero_rotate_seconds, music_enabled, music_autoplay, music_url, music_title",
+          "id, hero_opacity, hero_height, hero_fit, hero_text_color, hero_rotate_seconds, music_enabled, music_autoplay, music_url, music_title",
         )
         .eq("id", weddingId!)
         .maybeSingle();
@@ -63,6 +67,8 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
     setDraft({
       hero_opacity: w.hero_opacity ?? 30,
       hero_height: w.hero_height ?? "grande",
+      hero_fit: w.hero_fit ?? "cobrir",
+      hero_text_color: w.hero_text_color ?? "",
       hero_rotate_seconds: w.hero_rotate_seconds ?? 7,
       music_enabled: w.music_enabled ?? false,
       music_autoplay: w.music_autoplay ?? true,
@@ -78,6 +84,8 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
         .update({
           hero_opacity: Math.min(100, Math.max(0, Number(draft.hero_opacity) || 0)),
           hero_height: draft.hero_height,
+          hero_fit: draft.hero_fit,
+          hero_text_color: draft.hero_text_color.trim() || null,
           hero_rotate_seconds: Math.min(60, Math.max(3, Number(draft.hero_rotate_seconds) || 7)),
           music_enabled: draft.music_enabled,
           music_autoplay: draft.music_autoplay,
@@ -142,6 +150,48 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
                 <SelectItem value="normal">Normal</SelectItem>
                 <SelectItem value="grande">Grande</SelectItem>
                 <SelectItem value="tela">Tela cheia</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2 sm:col-span-3">
+            <Label htmlFor="hero-text-color">Cor das letras da capa</Label>
+            <div className="flex items-center gap-2">
+              <input
+                id="hero-text-color"
+                type="color"
+                value={draft.hero_text_color || "#ffffff"}
+                onChange={(e) => setDraft({ ...draft, hero_text_color: e.target.value })}
+                className="h-10 w-12 cursor-pointer rounded-md border border-input bg-background"
+              />
+              <Input
+                value={draft.hero_text_color}
+                placeholder="Automático"
+                maxLength={7}
+                onChange={(e) => setDraft({ ...draft, hero_text_color: e.target.value })}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDraft({ ...draft, hero_text_color: "" })}
+              >
+                Automático
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Use branco quando a foto for escura e um tom escuro quando a foto for clara.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Enquadramento da foto</Label>
+            <Select value={draft.hero_fit} onValueChange={(v) => setDraft({ ...draft, hero_fit: v })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cobrir">Preencher a capa toda</SelectItem>
+                <SelectItem value="inteira">Mostrar a foto inteira (sem cortar)</SelectItem>
               </SelectContent>
             </Select>
           </div>

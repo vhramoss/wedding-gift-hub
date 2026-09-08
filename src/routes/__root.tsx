@@ -94,7 +94,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Jost:wght@300;400;500;600&family=Playfair+Display:wght@400;500;600;700&family=Great+Vibes&family=Lora:wght@400;500;600&family=Montserrat:wght@300;400;500;600&family=Poppins:wght@300;400;500;600&family=Raleway:wght@300;400;500;600&family=Lato:wght@300;400;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Jost:wght@300;400;500;600&family=Playfair+Display:wght@400;500;600;700&family=Great+Vibes&family=Parisienne&family=Tangerine:wght@400;700&family=Lora:wght@400;500;600&family=Marcellus&family=Italiana&family=Cinzel:wght@400;500;600&family=Bodoni+Moda:wght@400;500;600&family=DM+Serif+Display&family=Libre+Baskerville:wght@400;700&family=Josefin+Sans:wght@300;400;500;600&family=Karla:wght@300;400;500;600&family=Mulish:wght@300;400;500;600&family=Work+Sans:wght@300;400;500;600&family=Nunito+Sans:wght@300;400;500;600&family=Montserrat:wght@300;400;500;600&family=Poppins:wght@300;400;500;600&family=Raleway:wght@300;400;500;600&family=Lato:wght@300;400;700&display=swap",
       },
       { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
     ],

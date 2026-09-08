@@ -846,9 +846,11 @@ export type Database = {
           dress_code: string | null
           groom_name: string
           hashtag: string | null
+          hero_fit: string
           hero_height: string
           hero_opacity: number
           hero_rotate_seconds: number
+          hero_text_color: string | null
           id: string
           music_autoplay: boolean
           music_enabled: boolean
@@ -908,9 +910,11 @@ export type Database = {
           dress_code?: string | null
           groom_name: string
           hashtag?: string | null
+          hero_fit?: string
           hero_height?: string
           hero_opacity?: number
           hero_rotate_seconds?: number
+          hero_text_color?: string | null
           id?: string
           music_autoplay?: boolean
           music_enabled?: boolean
@@ -970,9 +974,11 @@ export type Database = {
           dress_code?: string | null
           groom_name?: string
           hashtag?: string | null
+          hero_fit?: string
           hero_height?: string
           hero_opacity?: number
           hero_rotate_seconds?: number
+          hero_text_color?: string | null
           id?: string
           music_autoplay?: boolean
           music_enabled?: boolean

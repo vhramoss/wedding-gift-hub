@@ -1,0 +1,1 @@
+alter table public.weddings add column if not exists hero_fit text not null default 'cobrir';
