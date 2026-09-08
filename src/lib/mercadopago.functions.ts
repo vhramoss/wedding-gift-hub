@@ -1,7 +1,47 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
+import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+/**
+ * Cliente do banco para o visitante atual: usa o login quando existe, senão
+ * segue como visitante anônimo (compra de presente sem conta).
+ */
+async function currentClient() {
+  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
+  const url = process.env["SUPABASE_URL"]!;
+  const header = getRequest().headers.get("authorization") ?? "";
+  const token = header.toLowerCase().startsWith("bearer ")
+    ? header.slice(7).trim()
+    : "";
+
+  const makeClient = (bearer: string) =>
+    createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+          const h = new Headers(init?.headers);
+          h.set("apikey", key);
+          if (bearer) h.set("Authorization", `Bearer ${bearer}`);
+          else if (h.get("Authorization") === `Bearer ${key}`)
+            h.delete("Authorization");
+          return fetch(input, { ...init, headers: h });
+        },
+      },
+    });
+
+  if (!token) return { supabase: makeClient(""), userId: null, email: null };
+
+  const probe = makeClient(token);
+  const { data } = await probe.auth.getUser(token);
+  if (!data.user) return { supabase: makeClient(""), userId: null, email: null };
+  return {
+    supabase: probe,
+    userId: data.user.id,
+    email: data.user.email ?? null,
+  };
+}
 
 /**
  * Integração de pagamento real com o Mercado Pago.
@@ -235,7 +275,6 @@ export const getMercadoPagoConfig = createServerFn({ method: "POST" })
  * valores — o preço e as taxas são derivados dentro de create_gift_order (SQL).
  */
 export const createGiftOrder = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((data) =>
     z
       .object({
@@ -244,18 +283,37 @@ export const createGiftOrder = createServerFn({ method: "POST" })
         installments: z.number().int().min(1).max(12).default(1),
         shares: z.number().int().min(1).max(100).default(1),
         message: z.string().max(500).optional().default(""),
+        guestName: z.string().max(120).optional().default(""),
+        guestEmail: z.string().max(160).optional().default(""),
+        guestPhone: z.string().max(40).optional().default(""),
+        guestCpf: z.string().max(20).optional().default(""),
       })
       .parse(data),
   )
-  .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { data: result, error } = await supabase.rpc("create_gift_order", {
-      p_gift_id: data.giftId,
-      p_method: data.method,
-      p_installments: data.installments,
-      p_message: data.message,
-      p_shares: data.shares,
-    });
+  .handler(async ({ data }) => {
+    const { supabase, userId } = await currentClient();
+
+    const call = userId
+      ? supabase.rpc("create_gift_order", {
+          p_gift_id: data.giftId,
+          p_method: data.method,
+          p_installments: data.installments,
+          p_message: data.message,
+          p_shares: data.shares,
+        })
+      : supabase.rpc("create_public_gift_order", {
+          p_gift_id: data.giftId,
+          p_method: data.method,
+          p_installments: data.installments,
+          p_message: data.message,
+          p_shares: data.shares,
+          p_guest_name: data.guestName,
+          p_guest_email: data.guestEmail,
+          p_guest_phone: data.guestPhone,
+          p_guest_cpf: data.guestCpf,
+        });
+
+    const { data: result, error } = await call;
     if (error) throw error;
     const row = (result ?? []) as {
       order_id: string;
@@ -270,27 +328,54 @@ export const createGiftOrder = createServerFn({ method: "POST" })
     };
   });
 
+type PublicOrder = {
+  id: string;
+  wedding_id: string;
+  user_id: string | null;
+  status: string;
+  payment_method: string;
+  installments: number;
+  total_cents: number;
+  commission_cents: number;
+  gift_name: string | null;
+};
+
+/** Lê o pedido pelo código, funcionando com ou sem login. */
+async function loadOrder(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  orderId: string,
+  userId: string | null,
+): Promise<PublicOrder> {
+  const { data, error } = await supabase.rpc("public_order_status", {
+    p_order_id: orderId,
+  });
+  if (error) throw error;
+  const order = ((data ?? []) as PublicOrder[])[0];
+  if (!order) throw new Error("Pedido não encontrado.");
+  if (order.user_id && order.user_id !== userId)
+    throw new Error("Acesso negado ao pedido.");
+  if (!order.user_id && userId) throw new Error("Acesso negado ao pedido.");
+  return order;
+}
+
 /** Cria um pagamento Pix e devolve o QR Code "copia e cola". */
 export const createPixPayment = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((data) =>
-    z.object({ orderId: z.string().uuid() }).parse(data),
+    z
+      .object({
+        orderId: z.string().uuid(),
+        payerEmail: z.string().max(160).optional().default(""),
+      })
+      .parse(data),
   )
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
     if (!enabled()) {
       throw new Error("Pagamento via Mercado Pago não configurado.");
     }
 
-    const { supabase, userId, claims } = context;
-
-    const { data: order, error } = await supabase
-      .from("orders")
-      .select("id, gift_id, wedding_id, user_id, payment_method, status, total_cents, commission_cents, gifts(name)")
-      .eq("id", data.orderId)
-      .maybeSingle();
-    if (error) throw error;
-    if (!order) throw new Error("Pedido não encontrado.");
-    if (order.user_id !== userId) throw new Error("Acesso negado ao pedido.");
+    const { supabase, userId, email } = await currentClient();
+    const order = await loadOrder(supabase, data.orderId, userId);
     if (order.payment_method !== "pix") throw new Error("Pedido não é Pix.");
     if (order.status !== "pending") throw new Error("Pedido não está pendente.");
 
@@ -303,10 +388,11 @@ export const createPixPayment = createServerFn({ method: "POST" })
     const payment = await mpCreatePayment(
       {
         transaction_amount: order.total_cents / 100,
-        description: `Presente: ${order.gifts?.name ?? "Lista de presentes"}`,
+        description: `Presente: ${order.gift_name ?? "Lista de presentes"}`,
         payment_method_id: "pix",
         payer: {
-          email: claims.email ?? "convidado@lista-presentes.com",
+          email:
+            email || data.payerEmail || "convidado@lista-presentes.com",
           first_name: "Convidado",
         },
         external_reference: order.id,
@@ -324,12 +410,15 @@ export const createPixPayment = createServerFn({ method: "POST" })
     const qrCodeBase64 =
       payment.point_of_interaction?.transaction_data?.qr_code_base64 ?? "";
 
-    const { error: rpcError } = await supabase.rpc("record_pix_payment", {
-      p_order_id: order.id,
-      p_mp_payment_id: (payment.id ?? null) as number,
-      p_payload: qrCode,
-      p_qr_base64: qrCodeBase64,
-    });
+    const { error: rpcError } = await supabase.rpc(
+      userId ? "record_pix_payment" : "record_public_pix_payment",
+      {
+        p_order_id: order.id,
+        p_mp_payment_id: (payment.id ?? null) as number,
+        p_payload: qrCode,
+        p_qr_base64: qrCodeBase64,
+      },
+    );
     if (rpcError) throw rpcError;
 
     if (collector.split) {
@@ -351,7 +440,6 @@ export const createPixPayment = createServerFn({ method: "POST" })
 
 /** Processa um pagamento com cartão tokenizado pelo brick do Mercado Pago. */
 export const processCardPayment = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((data) =>
     z
       .object({
@@ -360,24 +448,17 @@ export const processCardPayment = createServerFn({ method: "POST" })
         paymentMethodId: z.string().min(1),
         issuerId: z.string().optional().default(""),
         installments: z.number().int().min(1).max(12).default(1),
+        payerEmail: z.string().max(160).optional().default(""),
       })
       .parse(data),
   )
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
     if (!enabled()) {
       throw new Error("Pagamento via Mercado Pago não configurado.");
     }
 
-    const { supabase, userId, claims } = context;
-
-    const { data: order, error } = await supabase
-      .from("orders")
-      .select("id, gift_id, wedding_id, user_id, payment_method, status, total_cents, commission_cents, installments, gifts(name)")
-      .eq("id", data.orderId)
-      .maybeSingle();
-    if (error) throw error;
-    if (!order) throw new Error("Pedido não encontrado.");
-    if (order.user_id !== userId) throw new Error("Acesso negado ao pedido.");
+    const { supabase, userId, email } = await currentClient();
+    const order = await loadOrder(supabase, data.orderId, userId);
     if (order.payment_method !== "credit" && order.payment_method !== "debit")
       throw new Error("Pedido não é de cartão.");
     if (order.status !== "pending") throw new Error("Pedido não está pendente.");
@@ -396,12 +477,12 @@ export const processCardPayment = createServerFn({ method: "POST" })
       {
         transaction_amount: order.total_cents / 100,
         token: data.token,
-        description: `Presente: ${order.gifts?.name ?? "Lista de presentes"}`,
+        description: `Presente: ${order.gift_name ?? "Lista de presentes"}`,
         installments,
         payment_method_id: data.paymentMethodId,
         issuer_id: data.issuerId || undefined,
         payer: {
-          email: claims.email ?? "convidado@lista-presentes.com",
+          email: email || data.payerEmail || "convidado@lista-presentes.com",
         },
         external_reference: order.id,
         ...(collector.split && collector.applicationFeeCents > 0

@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
@@ -90,24 +91,27 @@ function CheckoutPage() {
   const [cardOrder, setCardOrder] = useState<{ id: string; totalCents: number } | null>(null);
   const [cardResult, setCardResult] = useState<PayResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
 
   const newOrder = useServerFn(createGiftOrder);
   const createPix = useServerFn(createPixPayment);
   const processCard = useServerFn(processCardPayment);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate({
-        to: "/auth",
-        search: { redirect: `/casamento/${slug}/presente/${giftId}` },
-        replace: true,
-      });
-    }
-  }, [loading, user, navigate, slug, giftId]);
+  const guestData = user
+    ? {}
+    : {
+        guestName: guestName.trim(),
+        guestEmail: guestEmail.trim(),
+        guestPhone: guestPhone.trim(),
+      };
+
+  const guestReady =
+    Boolean(user) || (guestName.trim().length >= 3 && /.+@.+\..+/.test(guestEmail));
 
   const giftQuery = useQuery({
     queryKey: ["gift", giftId],
-    enabled: Boolean(user),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("gifts")
@@ -157,9 +161,18 @@ function CheckoutPage() {
   const startPix = useMutation({
     mutationFn: async () => {
       const order = await newOrder({
-        data: { giftId, method: "pix", installments: 1, shares, message: messageToCouple },
+        data: {
+          giftId,
+          method: "pix",
+          installments: 1,
+          shares,
+          message: messageToCouple,
+          ...guestData,
+        },
       });
-      const res = await createPix({ data: { orderId: order.orderId } });
+      const res = await createPix({
+        data: { orderId: order.orderId, payerEmail: guestEmail.trim() },
+      });
       return { orderId: order.orderId, ...res };
     },
     onSuccess: (res) => {
@@ -180,12 +193,11 @@ function CheckoutPage() {
     if (phase !== "pix" || !pixData?.orderId) return;
     let active = true;
     const check = async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select("status")
-        .eq("id", pixData.orderId)
-        .maybeSingle();
-      if (active && data?.status === "paid") {
+      const { data } = await supabase.rpc("public_order_status", {
+        p_order_id: pixData.orderId,
+      });
+      const row = (data ?? [])[0];
+      if (active && row?.status === "paid") {
         toast.success("Pagamento confirmado! Obrigado pelo presente.");
         navigate({
           to: "/casamento/$slug/obrigado",
@@ -212,6 +224,7 @@ function CheckoutPage() {
           installments: method === "credit" ? installments : 1,
           shares,
           message: messageToCouple,
+          ...guestData,
         },
       });
       return order;
@@ -232,7 +245,9 @@ function CheckoutPage() {
   }) => {
     if (!cardOrder) return;
     try {
-      const res = await processCard({ data: { orderId: cardOrder.id, ...cardData } });
+      const res = await processCard({
+        data: { orderId: cardOrder.id, ...cardData, payerEmail: guestEmail.trim() },
+      });
       setCardResult({ status: res.status, detail: res.detail });
       setPhase("result");
       if (res.status === "paid") {
@@ -260,7 +275,7 @@ function CheckoutPage() {
     }
   };
 
-  if (loading || mpConfig.isLoading || (Boolean(user) && giftQuery.isLoading)) {
+  if (loading || mpConfig.isLoading || giftQuery.isLoading) {
     return (
       <div className="mx-auto max-w-3xl space-y-4 p-8">
         <Skeleton className="h-40 w-full" />
@@ -269,13 +284,6 @@ function CheckoutPage() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="mx-auto max-w-xl p-16 text-center text-muted-foreground">
-        Redirecionando para o login…
-      </div>
-    );
-  }
 
   if (giftQuery.isError || !gift || !wedding) {
     return (
@@ -588,6 +596,45 @@ function CheckoutPage() {
               </div>
             ) : null}
 
+            {!user ? (
+              <div className="space-y-4 rounded-lg border border-border/60 p-4">
+                <p className="text-sm text-muted-foreground">
+                  Você não precisa criar conta. Só informe seus dados para os noivos
+                  saberem quem presenteou.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="guestName">Seu nome</Label>
+                  <Input
+                    id="guestName"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder="Nome completo"
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="guestEmail">E-mail</Label>
+                    <Input
+                      id="guestEmail"
+                      type="email"
+                      value={guestEmail}
+                      onChange={(e) => setGuestEmail(e.target.value)}
+                      placeholder="voce@email.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="guestPhone">Celular (opcional)</Label>
+                    <Input
+                      id="guestPhone"
+                      value={guestPhone}
+                      onChange={(e) => setGuestPhone(e.target.value)}
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <div className="space-y-2">
               <Label htmlFor="msg">Recado para os noivos (opcional)</Label>
               <Textarea
@@ -614,11 +661,8 @@ function CheckoutPage() {
               <span className="text-muted-foreground">
                 {sharesTotal > 1 ? `${shares} cota(s)` : "Valor do presente"}
               </span>
-              {/* Taxa de serviço somada diretamente aqui para o cliente não ver separado */}
               <span>{formatBRL(baseCents + serviceCents)}</span>
             </div>
-
-            {/* A linha dedicada da "Taxa de serviço" foi removida daqui */}
 
             <div className="flex justify-between">
               <span className="text-muted-foreground">Taxa de parcelamento</span>
@@ -645,7 +689,7 @@ function CheckoutPage() {
               <Button
                 className="mt-4 w-full"
                 size="lg"
-                disabled={startPix.isPending}
+                disabled={startPix.isPending || !guestReady}
                 onClick={() => startPix.mutate()}
               >
                 {startPix.isPending ? "Gerando Pix..." : "Pagar com Pix"}
@@ -654,7 +698,7 @@ function CheckoutPage() {
               <Button
                 className="mt-4 w-full"
                 size="lg"
-                disabled={startCard.isPending}
+                disabled={startCard.isPending || !guestReady}
                 onClick={() => startCard.mutate()}
               >
                 {startCard.isPending

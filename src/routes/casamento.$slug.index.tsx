@@ -70,7 +70,8 @@ function WeddingHome() {
 
   if (!wedding) return null;
 
-  const parts = countdownParts(wedding.wedding_date, wedding.party_time);
+  const startTime = wedding.ceremony_time || wedding.party_time;
+  const parts = countdownParts(wedding.wedding_date, startTime);
 
   const shortcuts = [
     {
@@ -111,9 +112,9 @@ function WeddingHome() {
         <section className="rounded-xl border border-border/70 bg-secondary/30 px-4 py-10 text-center">
           <p className="text-xs uppercase tracking-[0.35em] text-accent">Save the date</p>
           <p className="mt-3 font-display text-3xl">{formatWeddingDate(wedding.wedding_date)}</p>
-          {wedding.party_time ? (
+          {startTime ? (
             <p className="mt-1 text-sm uppercase tracking-[0.2em] text-muted-foreground">
-              às {wedding.party_time}
+              cerimônia às {startTime}
             </p>
           ) : null}
           <div className="mt-7 flex flex-wrap justify-center gap-3">
@@ -131,7 +132,7 @@ function WeddingHome() {
         </section>
       ) : null}
 
-      <p className="mx-auto mt-14 max-w-3xl text-center font-display text-2xl leading-relaxed text-muted-foreground">
+      <p className="mx-auto mt-14 max-w-3xl whitespace-pre-line text-center font-display text-xl leading-loose tracking-wide text-muted-foreground sm:text-2xl">
         {wedding.welcome_message ??
           "Nossa felicidade é ainda maior quando compartilhada. Esperamos você para celebrar com a gente!"}
       </p>

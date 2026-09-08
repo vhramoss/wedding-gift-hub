@@ -335,12 +335,19 @@ export function WeddingContentTab({ weddingId }: Props) {
               >
                 <Label htmlFor={field.name}>{field.label}</Label>
                 {field.area ? (
-                  <Textarea
-                    id={field.name}
-                    name={field.name}
-                    rows={4}
-                    defaultValue={wedding?.[field.name] ?? ""}
-                  />
+                  <>
+                    <Textarea
+                      id={field.name}
+                      name={field.name}
+                      rows={8}
+                      className="min-h-40 resize-y leading-relaxed"
+                      defaultValue={wedding?.[field.name] ?? ""}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Dê Enter para separar em parágrafos e deixe uma linha em branco entre eles — o
+                      site mostra exatamente do jeito que você escrever.
+                    </p>
+                  </>
                 ) : (
                   <Input
                     id={field.name}

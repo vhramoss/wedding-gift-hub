@@ -285,6 +285,11 @@ function SuperAdminPage() {
                             <ExternalLink className="size-4" /> Abrir site
                           </Link>
                         </Button>
+                        <Button asChild size="sm">
+                          <Link to="/painel" search={{ w: w.id }}>
+                            Área dos noivos
+                          </Link>
+                        </Button>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">

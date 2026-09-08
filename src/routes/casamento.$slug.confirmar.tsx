@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HeartHandshake, Lock } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { HeartHandshake, Lock, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useSession } from "@/hooks/useSession";
 import { formatWeddingDate, isRsvpOpen, useWedding } from "@/hooks/useWedding";
 
 export const Route = createFileRoute("/casamento/$slug/confirmar")({
@@ -20,80 +19,88 @@ export const Route = createFileRoute("/casamento/$slug/confirmar")({
       {
         name: "description",
         content:
-          "Confirme ou cancele sua presença no casamento, informe acompanhantes e deixe um recado.",
+          "Procure seu nome na lista de convidados e confirme sua presença no casamento em poucos segundos.",
       },
       { property: "og:title", content: "Confirmar presença · Casamento" },
-      { property: "og:description", content: "RSVP online para o casamento." },
+      { property: "og:description", content: "Procure seu nome e confirme sua presença." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: RsvpPage,
 });
 
+type Guest = {
+  id: string;
+  name: string;
+  group_label: string | null;
+  max_companions: number;
+  attending: boolean | null;
+  companions: number;
+  attending_ceremony: boolean | null;
+  attending_party: boolean | null;
+  dietary_notes: string | null;
+};
+
 function RsvpPage() {
   const { slug } = Route.useParams();
   const { data: wedding } = useWedding(slug);
-  const { user } = useSession();
-  const queryClient = useQueryClient();
+
+  const [term, setTerm] = useState("");
+  const [results, setResults] = useState<Guest[] | null>(null);
+  const [guest, setGuest] = useState<Guest | null>(null);
 
   const [attending, setAttending] = useState(true);
-  const [guestName, setGuestName] = useState("");
   const [companions, setCompanions] = useState(0);
-  const [message, setMessage] = useState("");
   const [ceremony, setCeremony] = useState(true);
   const [party, setParty] = useState(true);
   const [dietary, setDietary] = useState("");
+  const [message, setMessage] = useState("");
+  const [done, setDone] = useState(false);
 
-  const rsvpQuery = useQuery({
-    queryKey: ["rsvp", wedding?.id, user?.id],
-    enabled: Boolean(wedding?.id && user?.id),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rsvps")
-        .select("*")
-        .eq("wedding_id", wedding!.id)
-        .eq("user_id", user!.id)
-        .maybeSingle();
+  const search = useMutation({
+    mutationFn: async () => {
+      if (term.trim().length < 3) throw new Error("Digite pelo menos 3 letras do seu nome.");
+      const { data, error } = await supabase.rpc("search_wedding_guests", {
+        p_wedding_id: wedding!.id,
+        p_query: term.trim(),
+      });
       if (error) throw error;
-      return data;
+      return (data ?? []) as Guest[];
     },
+    onSuccess: (data) => setResults(data),
+    onError: (e: Error) => toast.error(e.message),
   });
 
-  useEffect(() => {
-    if (rsvpQuery.data) {
-      setAttending(rsvpQuery.data.attending);
-      setCompanions(rsvpQuery.data.companions);
-      setMessage(rsvpQuery.data.message ?? "");
-      setGuestName(rsvpQuery.data.guest_name ?? "");
-      setCeremony(rsvpQuery.data.attending_ceremony ?? true);
-      setParty(rsvpQuery.data.attending_party ?? true);
-      setDietary(rsvpQuery.data.dietary_notes ?? "");
-    }
-  }, [rsvpQuery.data]);
+  const pick = (g: Guest) => {
+    setGuest(g);
+    setDone(false);
+    setAttending(g.attending ?? true);
+    setCompanions(g.companions ?? 0);
+    setCeremony(g.attending_ceremony ?? true);
+    setParty(g.attending_party ?? true);
+    setDietary(g.dietary_notes ?? "");
+  };
 
   const save = useMutation({
     mutationFn: async (override?: { attending: boolean }) => {
       const willAttend = override?.attending ?? attending;
-      const { error } = await supabase.from("rsvps").upsert(
-        {
-          wedding_id: wedding!.id,
-          user_id: user!.id,
-          guest_name: guestName.trim(),
-          attending: willAttend,
-          companions: willAttend ? Math.max(0, Math.min(companions, 10)) : 0,
-          message: message.trim() || null,
-          attending_ceremony: willAttend ? ceremony : false,
-          attending_party: willAttend ? party : false,
-          dietary_notes: willAttend ? dietary.trim() || null : null,
-        },
-        { onConflict: "wedding_id,user_id" },
-      );
+      const { error } = await supabase.rpc("respond_wedding_guest", {
+        p_guest_id: guest!.id,
+        p_attending: willAttend,
+        p_companions: willAttend ? companions : 0,
+        p_ceremony: ceremony,
+        p_party: party,
+        ...(dietary.trim() ? { p_dietary: dietary.trim() } : {}),
+        ...(message.trim() ? { p_message: message.trim() } : {}),
+      });
       if (error) throw error;
       return willAttend;
     },
     onSuccess: (willAttend) => {
       setAttending(willAttend);
-      toast.success(willAttend ? "Presença confirmada. Obrigado!" : "Presença cancelada.");
-      queryClient.invalidateQueries({ queryKey: ["rsvp", wedding?.id, user?.id] });
+      setDone(true);
+      toast.success(willAttend ? "Presença confirmada. Obrigado!" : "Resposta registrada.");
     },
     onError: (e: Error) => toast.error("Não foi possível salvar", { description: e.message }),
   });
@@ -116,19 +123,13 @@ function RsvpPage() {
           {deadlineText ? (
             <p className="text-sm text-muted-foreground">
               {open
-                ? `Você pode alterar ou cancelar sua resposta até ${deadlineText}.`
-                : `O prazo para alterações terminou em ${deadlineText}.`}
+                ? `Você pode alterar sua resposta até ${deadlineText}.`
+                : `O prazo para respostas terminou em ${deadlineText}.`}
             </p>
           ) : null}
         </CardHeader>
-        <CardContent className="space-y-6">
-          {rsvpQuery.data ? (
-            <p className="rounded-lg border border-border/60 bg-secondary/30 p-3 text-sm">
-              Sua resposta atual:{" "}
-              <strong>{rsvpQuery.data.attending ? "Presença confirmada" : "Não poderá ir"}</strong>
-            </p>
-          ) : null}
 
+        <CardContent className="space-y-6">
           {!open ? (
             <div className="flex items-start gap-3 rounded-lg border border-border/60 p-4 text-sm text-muted-foreground">
               <Lock className="mt-0.5 size-4 text-accent" />
@@ -137,17 +138,71 @@ function RsvpPage() {
                 alterar algo.
               </span>
             </div>
-          ) : (
+          ) : !guest ? (
             <>
               <div className="space-y-2">
-                <Label htmlFor="guestName">Seu nome</Label>
-                <Input
-                  id="guestName"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="Como os noivos devem te identificar"
-                />
+                <Label htmlFor="term">Procure seu nome na lista de convidados</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="term"
+                    value={term}
+                    onChange={(e) => setTerm(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") search.mutate();
+                    }}
+                    placeholder="Digite seu nome completo ou parte dele"
+                  />
+                  <Button onClick={() => search.mutate()} disabled={search.isPending}>
+                    <Search className="size-4" /> Buscar
+                  </Button>
+                </div>
               </div>
+
+              {results ? (
+                results.length === 0 ? (
+                  <p className="rounded-lg border border-border/60 bg-secondary/30 p-4 text-sm text-muted-foreground">
+                    Não encontramos esse nome na lista. Tente escrever de outro jeito ou fale com os
+                    noivos.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {results.map((g) => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => pick(g)}
+                        className="w-full rounded-lg border border-border/60 p-3 text-left transition-colors hover:border-accent"
+                      >
+                        <span className="font-medium">{g.name}</span>
+                        {g.group_label ? (
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            {g.group_label}
+                          </span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                )
+              ) : null}
+            </>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-secondary/30 p-3 text-sm">
+                <span>
+                  Respondendo como <strong>{guest.name}</strong>
+                </span>
+                <Button variant="link" className="px-0" onClick={() => setGuest(null)}>
+                  Não sou eu
+                </Button>
+              </div>
+
+              {done ? (
+                <p className="rounded-lg border border-border/60 p-4 text-center">
+                  {attending
+                    ? "Presença confirmada! Até lá 💛"
+                    : "Que pena! Sua resposta foi registrada."}
+                </p>
+              ) : null}
 
               <div className="flex gap-3">
                 <Button
@@ -200,15 +255,21 @@ function RsvpPage() {
                     />
                   </div>
 
-                  <Label htmlFor="companions">Acompanhantes</Label>
-                  <Input
-                    id="companions"
-                    type="number"
-                    min={0}
-                    max={10}
-                    value={companions}
-                    onChange={(e) => setCompanions(Number(e.target.value))}
-                  />
+                  {guest.max_companions > 0 ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="companions">
+                        Acompanhantes (até {guest.max_companions})
+                      </Label>
+                      <Input
+                        id="companions"
+                        type="number"
+                        min={0}
+                        max={guest.max_companions}
+                        value={companions}
+                        onChange={(e) => setCompanions(Number(e.target.value))}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -227,19 +288,8 @@ function RsvpPage() {
                 onClick={() => save.mutate(undefined)}
                 disabled={save.isPending}
               >
-                {rsvpQuery.data ? "Atualizar resposta" : "Confirmar presença"}
+                Enviar resposta
               </Button>
-
-              {rsvpQuery.data?.attending ? (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  disabled={save.isPending}
-                  onClick={() => save.mutate({ attending: false })}
-                >
-                  Cancelar minha presença
-                </Button>
-              ) : null}
             </>
           )}
         </CardContent>

@@ -61,6 +61,21 @@ export function WeddingPhotosTab({ weddingId }: { weddingId: string | null }) {
     },
   });
 
+  const toggleCover = useMutation({
+    mutationFn: async ({ id, value }: { id: string; value: boolean }) => {
+      const { error } = await supabase
+        .from("wedding_photos")
+        .update({ show_in_cover: value })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["panel", "photos", weddingId] });
+      queryClient.invalidateQueries({ queryKey: ["wedding-cover-photos"] });
+    },
+    onError: (e: Error) => toast.error("Erro", { description: e.message }),
+  });
+
   if (!weddingId) return null;
 
   return (
@@ -105,16 +120,31 @@ export function WeddingPhotosTab({ weddingId }: { weddingId: string | null }) {
               className="h-48 w-full object-cover"
               loading="lazy"
             />
-            <CardContent className="flex items-center justify-between gap-2 pt-4">
-              <span className="text-sm text-muted-foreground">{photo.caption ?? "Sem legenda"}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Remover foto"
-                onClick={() => removePhoto.mutate(photo.id)}
-              >
-                <Trash2 className="size-4" />
-              </Button>
+            <CardContent className="space-y-3 pt-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {photo.caption ?? "Sem legenda"}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Remover foto"
+                  onClick={() => removePhoto.mutate(photo.id)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-[var(--primary)]"
+                  checked={Boolean(photo.show_in_cover)}
+                  onChange={(e) =>
+                    toggleCover.mutate({ id: photo.id, value: e.target.checked })
+                  }
+                />
+                Mostrar na capa do site
+              </label>
             </CardContent>
           </Card>
         ))}

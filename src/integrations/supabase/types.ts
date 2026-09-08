@@ -94,7 +94,9 @@ export type Database = {
           fee_cents: number
           gift_id: string
           guest_cpf: string | null
+          guest_email: string | null
           guest_name: string
+          guest_phone: string | null
           id: string
           installments: number
           message: string | null
@@ -109,7 +111,7 @@ export type Database = {
           status: string
           total_cents: number
           updated_at: string
-          user_id: string
+          user_id: string | null
           wedding_id: string
         }
         Insert: {
@@ -120,7 +122,9 @@ export type Database = {
           fee_cents?: number
           gift_id: string
           guest_cpf?: string | null
+          guest_email?: string | null
           guest_name?: string
+          guest_phone?: string | null
           id?: string
           installments?: number
           message?: string | null
@@ -135,7 +139,7 @@ export type Database = {
           status?: string
           total_cents: number
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           wedding_id: string
         }
         Update: {
@@ -146,7 +150,9 @@ export type Database = {
           fee_cents?: number
           gift_id?: string
           guest_cpf?: string | null
+          guest_email?: string | null
           guest_name?: string
+          guest_phone?: string | null
           id?: string
           installments?: number
           message?: string | null
@@ -161,7 +167,7 @@ export type Database = {
           status?: string
           total_cents?: number
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           wedding_id?: string
         }
         Relationships: [
@@ -427,6 +433,77 @@ export type Database = {
           },
           {
             foreignKeyName: "wedding_expenses_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wedding_guests: {
+        Row: {
+          attending: boolean | null
+          attending_ceremony: boolean | null
+          attending_party: boolean | null
+          companions: number
+          created_at: string
+          dietary_notes: string | null
+          email: string | null
+          group_label: string | null
+          id: string
+          max_companions: number
+          message: string | null
+          name: string
+          name_norm: string | null
+          phone: string | null
+          reminder_sent_at: string | null
+          responded_at: string | null
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          attending?: boolean | null
+          attending_ceremony?: boolean | null
+          attending_party?: boolean | null
+          companions?: number
+          created_at?: string
+          dietary_notes?: string | null
+          email?: string | null
+          group_label?: string | null
+          id?: string
+          max_companions?: number
+          message?: string | null
+          name: string
+          name_norm?: string | null
+          phone?: string | null
+          reminder_sent_at?: string | null
+          responded_at?: string | null
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          attending?: boolean | null
+          attending_ceremony?: boolean | null
+          attending_party?: boolean | null
+          companions?: number
+          created_at?: string
+          dietary_notes?: string | null
+          email?: string | null
+          group_label?: string | null
+          id?: string
+          max_companions?: number
+          message?: string | null
+          name?: string
+          name_norm?: string | null
+          phone?: string | null
+          reminder_sent_at?: string | null
+          responded_at?: string | null
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_guests_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
             referencedRelation: "weddings"
@@ -715,6 +792,7 @@ export type Database = {
           caption: string | null
           created_at: string
           id: string
+          show_in_cover: boolean
           sort_order: number
           updated_at: string
           url: string
@@ -724,6 +802,7 @@ export type Database = {
           caption?: string | null
           created_at?: string
           id?: string
+          show_in_cover?: boolean
           sort_order?: number
           updated_at?: string
           url: string
@@ -733,6 +812,7 @@ export type Database = {
           caption?: string | null
           created_at?: string
           id?: string
+          show_in_cover?: boolean
           sort_order?: number
           updated_at?: string
           url?: string
@@ -766,7 +846,14 @@ export type Database = {
           dress_code: string | null
           groom_name: string
           hashtag: string | null
+          hero_height: string
+          hero_opacity: number
+          hero_rotate_seconds: number
           id: string
+          music_autoplay: boolean
+          music_enabled: boolean
+          music_title: string | null
+          music_url: string | null
           notify_whatsapp: string | null
           owner_id: string | null
           party_address: string | null
@@ -784,6 +871,9 @@ export type Database = {
           plan_started_on: string | null
           published: boolean
           rsvp_deadline: string | null
+          rsvp_reminder_days: number
+          rsvp_reminder_enabled: boolean
+          rsvp_reminder_template: string | null
           slug: string
           story_how_we_met: string | null
           story_proposal: string | null
@@ -818,7 +908,14 @@ export type Database = {
           dress_code?: string | null
           groom_name: string
           hashtag?: string | null
+          hero_height?: string
+          hero_opacity?: number
+          hero_rotate_seconds?: number
           id?: string
+          music_autoplay?: boolean
+          music_enabled?: boolean
+          music_title?: string | null
+          music_url?: string | null
           notify_whatsapp?: string | null
           owner_id?: string | null
           party_address?: string | null
@@ -836,6 +933,9 @@ export type Database = {
           plan_started_on?: string | null
           published?: boolean
           rsvp_deadline?: string | null
+          rsvp_reminder_days?: number
+          rsvp_reminder_enabled?: boolean
+          rsvp_reminder_template?: string | null
           slug: string
           story_how_we_met?: string | null
           story_proposal?: string | null
@@ -870,7 +970,14 @@ export type Database = {
           dress_code?: string | null
           groom_name?: string
           hashtag?: string | null
+          hero_height?: string
+          hero_opacity?: number
+          hero_rotate_seconds?: number
           id?: string
+          music_autoplay?: boolean
+          music_enabled?: boolean
+          music_title?: string | null
+          music_url?: string | null
           notify_whatsapp?: string | null
           owner_id?: string | null
           party_address?: string | null
@@ -888,6 +995,9 @@ export type Database = {
           plan_started_on?: string | null
           published?: boolean
           rsvp_deadline?: string | null
+          rsvp_reminder_days?: number
+          rsvp_reminder_enabled?: boolean
+          rsvp_reminder_template?: string | null
           slug?: string
           story_how_we_met?: string | null
           story_proposal?: string | null
@@ -959,6 +1069,24 @@ export type Database = {
           wedding_id: string
         }[]
       }
+      create_public_gift_order: {
+        Args: {
+          p_gift_id: string
+          p_guest_cpf?: string
+          p_guest_email: string
+          p_guest_name: string
+          p_guest_phone?: string
+          p_installments: number
+          p_message: string
+          p_method: string
+          p_shares: number
+        }
+        Returns: {
+          installments: number
+          order_id: string
+          total_cents: number
+        }[]
+      }
       disconnect_wedding_mp: {
         Args: { _wedding_id: string }
         Returns: undefined
@@ -980,8 +1108,26 @@ export type Database = {
         }
         Returns: boolean
       }
+      norm_txt: { Args: { t: string }; Returns: string }
       order_confirm_secret_is_set: { Args: never; Returns: boolean }
       owns_wedding: { Args: { _wedding_id: string }; Returns: boolean }
+      public_order_status: {
+        Args: { p_order_id: string }
+        Returns: {
+          commission_cents: number
+          gift_id: string
+          gift_name: string
+          id: string
+          installments: number
+          payment_method: string
+          pix_payload: string
+          pix_qr_base64: string
+          status: string
+          total_cents: number
+          user_id: string
+          wedding_id: string
+        }[]
+      }
       record_order_split: {
         Args: {
           p_application_fee_cents: number
@@ -1000,9 +1146,30 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_public_pix_payment: {
+        Args: {
+          p_mp_payment_id: number
+          p_order_id: string
+          p_payload: string
+          p_qr_base64: string
+        }
+        Returns: undefined
+      }
       redeem_invite: {
         Args: { _token: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      respond_wedding_guest: {
+        Args: {
+          p_attending: boolean
+          p_ceremony?: boolean
+          p_companions?: number
+          p_dietary?: string
+          p_guest_id: string
+          p_message?: string
+          p_party?: boolean
+        }
+        Returns: undefined
       }
       rsvp_open: { Args: { _wedding_id: string }; Returns: boolean }
       save_wedding_mp_account: {
@@ -1018,6 +1185,20 @@ export type Database = {
           p_wedding_id: string
         }
         Returns: undefined
+      }
+      search_wedding_guests: {
+        Args: { p_query: string; p_wedding_id: string }
+        Returns: {
+          attending: boolean
+          attending_ceremony: boolean
+          attending_party: boolean
+          companions: number
+          dietary_notes: string
+          group_label: string
+          id: string
+          max_companions: number
+          name: string
+        }[]
       }
       set_order_confirm_secret: {
         Args: { p_secret: string }

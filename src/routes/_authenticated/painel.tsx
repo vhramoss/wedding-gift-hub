@@ -13,6 +13,7 @@ import { FinanceTab } from "@/components/admin/FinanceTab";
 
 import { WeddingContentTab } from "@/components/admin/WeddingContentTab";
 import { WeddingPhotosTab } from "@/components/admin/WeddingPhotosTab";
+import { SiteExtrasTab } from "@/components/painel/SiteExtrasTab";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PaymentAccountTab } from "@/components/painel/PaymentAccountTab";
 import { PayoutSummary } from "@/components/painel/PayoutSummary";
 import { NotificationsTab } from "@/components/painel/NotificationsTab";
+import { GuestListTab } from "@/components/painel/GuestListTab";
 import { whatsappLink } from "@/lib/brand";
 import { downloadCsv } from "@/lib/csv";
 import { useSession } from "@/hooks/useSession";
@@ -31,6 +33,8 @@ import { useMyWedding } from "@/hooks/useMyWedding";
 import { formatBRL, PAYMENT_LABELS, type PaymentMethod } from "@/lib/br";
 
 export const Route = createFileRoute("/_authenticated/painel")({
+  validateSearch: (search: Record<string, unknown>): { w?: string } =>
+    typeof search["w"] === "string" ? { w: search["w"] } : {},
   head: () => ({
     meta: [
       { title: "Área dos noivos · Nosso Casamento" },
@@ -65,11 +69,30 @@ function toCents(value: string) {
 
 function CouplePanel() {
   const { user } = useSession();
-  const { isOwner, isLoading: rolesLoading } = useMyRoles(user?.id);
+  const { isOwner, isSuperAdmin, isLoading: rolesLoading } = useMyRoles(user?.id);
   const queryClient = useQueryClient();
-  const weddingQuery = useMyWedding(user?.id);
-  const wedding = weddingQuery.data;
+  const { w: overrideId } = Route.useSearch();
+  const myWeddingQuery = useMyWedding(user?.id);
+  const asAdmin = Boolean(overrideId && isSuperAdmin);
+
+  const overrideQuery = useQuery({
+    queryKey: ["panel", "wedding-as-admin", overrideId],
+    enabled: asAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("weddings")
+        .select("*")
+        .eq("id", overrideId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const wedding = (asAdmin ? overrideQuery.data : myWeddingQuery.data) ?? null;
+  const weddingLoading = asAdmin ? overrideQuery.isLoading : myWeddingQuery.isLoading;
   const weddingId = wedding?.id ?? null;
+
 
   const giftsQuery = useQuery({
     queryKey: ["panel", "gifts", weddingId],
@@ -106,20 +129,6 @@ function CouplePanel() {
       const { data, error } = await supabase.rpc("wedding_donors", {
         _wedding_id: weddingId!,
       });
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const rsvpsQuery = useQuery({
-    queryKey: ["panel", "rsvps", weddingId],
-    enabled: Boolean(weddingId),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rsvps")
-        .select("*")
-        .eq("wedding_id", weddingId!)
-        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -199,7 +208,7 @@ function CouplePanel() {
     onError: (e: Error) => toast.error("Erro", { description: e.message }),
   });
 
-  if (rolesLoading || weddingQuery.isLoading) {
+  if (rolesLoading || weddingLoading) {
     return (
       <div className="min-h-screen">
         <SiteHeader />
@@ -345,11 +354,12 @@ function CouplePanel() {
           <TabsList>
             <TabsTrigger value="content">Nosso site</TabsTrigger>
             <TabsTrigger value="photos">Fotos</TabsTrigger>
+            <TabsTrigger value="extras">Capa e música</TabsTrigger>
             <TabsTrigger value="announcements">Avisos</TabsTrigger>
             <TabsTrigger value="notifications">Novidades</TabsTrigger>
             <TabsTrigger value="gifts">Presentes</TabsTrigger>
             <TabsTrigger value="orders">Pedidos</TabsTrigger>
-            <TabsTrigger value="rsvps">Confirmações</TabsTrigger>
+            <TabsTrigger value="rsvps">Convidados</TabsTrigger>
             <TabsTrigger value="invites">Convites</TabsTrigger>
             <TabsTrigger value="appearance">Aparência</TabsTrigger>
             <TabsTrigger value="finance">Financeiro</TabsTrigger>
@@ -363,6 +373,10 @@ function CouplePanel() {
 
           <TabsContent value="photos" className="mt-6">
             <WeddingPhotosTab weddingId={weddingId} />
+          </TabsContent>
+
+          <TabsContent value="extras" className="mt-6">
+            <SiteExtrasTab weddingId={weddingId} />
           </TabsContent>
 
           <TabsContent value="announcements" className="mt-6">
@@ -602,75 +616,8 @@ function CouplePanel() {
             ) : null}
           </TabsContent>
 
-          <TabsContent value="rsvps" className="mt-6 space-y-4">
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  downloadCsv(
-                    "confirmacoes.csv",
-                    [
-                      "Convidado",
-                      "Vai ao casamento",
-                      "Cerimônia",
-                      "Festa",
-                      "Acompanhantes",
-                      "Restrição alimentar",
-                      "Recado",
-                      "Data",
-                    ],
-                    (rsvpsQuery.data ?? []).map((r) => [
-                      r.guest_name || "Convidado",
-                      r.attending ? "Sim" : "Não",
-                      r.attending_ceremony ? "Sim" : "Não",
-                      r.attending_party ? "Sim" : "Não",
-                      r.companions,
-                      r.dietary_notes ?? "",
-                      r.message ?? "",
-                      new Date(r.created_at).toLocaleString("pt-BR"),
-                    ]),
-                  )
-                }
-              >
-                <Download className="size-4" /> Exportar planilha
-              </Button>
-            </div>
-            {(rsvpsQuery.data ?? []).map((rsvp) => (
-              <Card key={rsvp.id}>
-                <CardContent className="flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <p className="mb-2 font-medium">{rsvp.guest_name || "Convidado"}</p>
-                    <Badge variant={rsvp.attending ? "default" : "secondary"}>
-                      {rsvp.attending ? "Confirmado" : "Não vai"}
-                    </Badge>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Acompanhantes: {rsvp.companions}
-                    </p>
-                    {rsvp.attending ? (
-                      <p className="text-sm text-muted-foreground">
-                        Cerimônia: {rsvp.attending_ceremony ? "sim" : "não"} · Festa:{" "}
-                        {rsvp.attending_party ? "sim" : "não"}
-                      </p>
-                    ) : null}
-                    {rsvp.dietary_notes ? (
-                      <p className="text-sm text-muted-foreground">
-                        Restrição alimentar: {rsvp.dietary_notes}
-                      </p>
-                    ) : null}
-                    {rsvp.message ? (
-                      <p className="mt-1 text-sm italic text-muted-foreground">“{rsvp.message}”</p>
-                    ) : null}
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(rsvp.created_at).toLocaleString("pt-BR")}
-                  </span>
-                </CardContent>
-              </Card>
-            ))}
-            {(rsvpsQuery.data ?? []).length === 0 ? (
-              <p className="text-muted-foreground">Nenhuma confirmação registrada.</p>
-            ) : null}
+          <TabsContent value="rsvps" className="mt-6">
+            <GuestListTab weddingId={weddingId} />
           </TabsContent>
 
           <TabsContent value="invites" className="mt-6">
