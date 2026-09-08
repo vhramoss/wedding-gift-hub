@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Gift } from "lucide-react";
+import { Check, Gift, ShoppingBag } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatBRL } from "@/lib/br";
 import { useWedding } from "@/hooks/useWedding";
+import { useCart } from "@/lib/cart";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/casamento/$slug/presentes")({
   head: () => ({
@@ -30,6 +32,7 @@ function GiftsPage() {
   const { slug } = Route.useParams();
   const { data: wedding } = useWedding(slug);
   const [category, setCategory] = useState<string>("todos");
+  const cart = useCart();
 
   const giftsQuery = useQuery({
     queryKey: ["gifts", wedding?.id],
@@ -58,6 +61,21 @@ function GiftsPage() {
         Sua presença é o melhor presente, mas se quiser nos mimar, escolha uma opção abaixo. O
         pagamento é feito aqui mesmo, por Pix ou cartão.
       </p>
+
+      {cart.count > 0 ? (
+        <div className="mt-8 flex flex-col items-center justify-between gap-3 rounded-xl border border-accent/40 bg-secondary/40 p-4 sm:flex-row">
+          <p className="text-sm">
+            <ShoppingBag className="mr-2 inline size-4 text-accent" />
+            {cart.count} presente{cart.count > 1 ? "s" : ""} no carrinho ·{" "}
+            <strong>{formatBRL(cart.totalCents)}</strong>
+          </p>
+          <Button asChild size="sm">
+            <Link to="/casamento/$slug/carrinho" params={{ slug }}>
+              Finalizar presentes
+            </Link>
+          </Button>
+        </div>
+      ) : null}
 
       {categories.length > 2 ? (
         <div className="mt-8 flex flex-wrap justify-center gap-2">
@@ -142,7 +160,34 @@ function GiftsPage() {
                       </div>
                     </div>
                   ) : null}
-                  <Button asChild disabled={soldOut} className="mt-2">
+                  <div className="mt-2 flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={soldOut || cart.has(gift.id)}
+                    onClick={() => {
+                      cart.add({
+                        giftId: gift.id,
+                        name: gift.name,
+                        imageUrl: gift.image_url,
+                        unitCents: sharesTotal > 1 ? sharePrice : gift.price_cents,
+                        shares: 1,
+                        maxShares: sharesTotal > 1 ? sharesLeft : 1,
+                        isShared: sharesTotal > 1,
+                      });
+                      toast.success("Adicionado ao carrinho!");
+                    }}
+                  >
+                    {cart.has(gift.id) ? (
+                      <>
+                        <Check className="size-4" /> No carrinho
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag className="size-4" /> Adicionar ao carrinho
+                      </>
+                    )}
+                  </Button>
+                  <Button asChild disabled={soldOut}>
                     <Link
                       to="/casamento/$slug/presente/$giftId"
                       params={{ slug, giftId: gift.id }}
@@ -155,6 +200,7 @@ function GiftsPage() {
                           : "Presentear"}
                     </Link>
                   </Button>
+                  </div>
                 </CardContent>
               </Card>
             );

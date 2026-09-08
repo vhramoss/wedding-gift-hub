@@ -49,6 +49,8 @@ const TEXT_FIELDS = [
   { name: "dress_code", label: "Traje", area: true },
   { name: "tips", label: "Dicas aos convidados", area: true },
   { name: "hashtag", label: "Hashtag", area: false },
+  { name: "monogram", label: "Monograma da capa (ex.: C · C)", area: false },
+  { name: "couple_intro", label: "Texto da seção \"O casal\"", area: true },
 ] as const;
 
 export function WeddingContentTab({ weddingId }: Props) {
@@ -379,6 +381,18 @@ export function WeddingContentTab({ weddingId }: Props) {
             weddingId={weddingId}
             value={wedding?.['cover_image_url'] ?? ""}
             onChange={(url) => saveImage.mutate({ column: "cover_image_url", url })}
+          />
+          <ImageUploadField
+            label="Foto do noivo (seção O casal)"
+            weddingId={weddingId}
+            value={wedding?.['groom_photo_url'] ?? ""}
+            onChange={(url) => saveImage.mutate({ column: "groom_photo_url", url })}
+          />
+          <ImageUploadField
+            label="Foto da noiva (seção O casal)"
+            weddingId={weddingId}
+            value={wedding?.['bride_photo_url'] ?? ""}
+            onChange={(url) => saveImage.mutate({ column: "bride_photo_url", url })}
           />
           <ImageUploadField
             label="Foto do local da festa"

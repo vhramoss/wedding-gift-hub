@@ -22,6 +22,8 @@ type Draft = {
   hero_height: string;
   hero_fit: string;
   hero_text_color: string;
+  hero_pos_x: number;
+  hero_pos_y: number;
   hero_rotate_seconds: number;
   music_enabled: boolean;
   music_autoplay: boolean;
@@ -34,11 +36,19 @@ const EMPTY: Draft = {
   hero_height: "grande",
   hero_fit: "cobrir",
   hero_text_color: "",
+  hero_pos_x: 50,
+  hero_pos_y: 50,
   hero_rotate_seconds: 7,
   music_enabled: false,
   music_autoplay: true,
   music_url: "",
   music_title: "",
+};
+
+const PREVIEW_HEIGHT: Record<string, string> = {
+  normal: "h-44",
+  grande: "h-64",
+  tela: "h-80",
 };
 
 export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
@@ -52,13 +62,45 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
       const { data, error } = await supabase
         .from("weddings")
         .select(
-          "id, hero_opacity, hero_height, hero_fit, hero_text_color, hero_rotate_seconds, music_enabled, music_autoplay, music_url, music_title",
+          "id, bride_name, groom_name, published, cover_image_url, hero_opacity, hero_height, hero_fit, hero_text_color, hero_pos_x, hero_pos_y, hero_rotate_seconds, music_enabled, music_autoplay, music_url, music_title",
         )
         .eq("id", weddingId!)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
+  });
+
+  const photosQuery = useQuery({
+    queryKey: ["panel", "extras-cover-photos", weddingId],
+    enabled: Boolean(weddingId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("wedding_photos")
+        .select("id, url")
+        .eq("wedding_id", weddingId!)
+        .eq("show_in_cover", true)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const togglePublished = useMutation({
+    mutationFn: async (value: boolean) => {
+      const { error } = await supabase
+        .from("weddings")
+        .update({ published: value })
+        .eq("id", weddingId!);
+      if (error) throw error;
+      return value;
+    },
+    onSuccess: (value) => {
+      toast.success(value ? "Site publicado! O link já abre para qualquer pessoa." : "Site voltou a ficar privado.");
+      queryClient.invalidateQueries({ queryKey: ["panel", "extras", weddingId] });
+      queryClient.invalidateQueries({ queryKey: ["wedding"] });
+    },
+    onError: (e: Error) => toast.error("Não deu para mudar", { description: e.message }),
   });
 
   useEffect(() => {
@@ -69,6 +111,8 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
       hero_height: w.hero_height ?? "grande",
       hero_fit: w.hero_fit ?? "cobrir",
       hero_text_color: w.hero_text_color ?? "",
+      hero_pos_x: w.hero_pos_x ?? 50,
+      hero_pos_y: w.hero_pos_y ?? 50,
       hero_rotate_seconds: w.hero_rotate_seconds ?? 7,
       music_enabled: w.music_enabled ?? false,
       music_autoplay: w.music_autoplay ?? true,
@@ -86,6 +130,8 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
           hero_height: draft.hero_height,
           hero_fit: draft.hero_fit,
           hero_text_color: draft.hero_text_color.trim() || null,
+          hero_pos_x: Math.min(100, Math.max(0, Number(draft.hero_pos_x) || 0)),
+          hero_pos_y: Math.min(100, Math.max(0, Number(draft.hero_pos_y) || 0)),
           hero_rotate_seconds: Math.min(60, Math.max(3, Number(draft.hero_rotate_seconds) || 7)),
           music_enabled: draft.music_enabled,
           music_autoplay: draft.music_autoplay,
@@ -105,8 +151,82 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
 
   if (!weddingId) return null;
 
+  const wedding = weddingQuery.data;
+  const previewPhotos = [
+    ...(wedding?.cover_image_url ? [wedding.cover_image_url] : []),
+    ...(photosQuery.data ?? []).map((p) => p.url),
+  ];
+  const previewSrc = previewPhotos[0] ?? null;
+
   return (
     <div className="space-y-6">
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="text-xl">Link do site</CardTitle>
+          <CardDescription>
+            Enquanto estiver desligado, só vocês enxergam o site. Ligando, qualquer pessoa com o
+            link entra sem fazer conta.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between rounded-lg border border-border/60 p-4">
+            <div>
+              <p className="font-medium">Site aberto para os convidados</p>
+              <p className="text-sm text-muted-foreground">
+                {wedding?.published ? "Publicado" : "Rascunho (ninguém de fora consegue abrir)"}
+              </p>
+            </div>
+            <Switch
+              checked={Boolean(wedding?.published)}
+              disabled={togglePublished.isPending}
+              onCheckedChange={(v) => togglePublished.mutate(v)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="text-xl">Pré-visualização da capa</CardTitle>
+          <CardDescription>
+            É assim que a capa vai ficar. Ajuste abaixo e veja mudar na hora.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div
+            className={`relative flex items-center justify-center overflow-hidden rounded-xl border border-border/60 bg-secondary/40 ${
+              PREVIEW_HEIGHT[draft.hero_height] ?? PREVIEW_HEIGHT["grande"]
+            }`}
+          >
+            {previewSrc ? (
+              <img
+                src={previewSrc}
+                alt="Prévia da capa"
+                className={`absolute inset-0 size-full ${
+                  draft.hero_fit === "inteira" ? "object-contain" : "object-cover"
+                }`}
+                style={{
+                  opacity: draft.hero_opacity / 100,
+                  objectPosition: `${draft.hero_pos_x}% ${draft.hero_pos_y}%`,
+                }}
+              />
+            ) : (
+              <p className="px-4 text-center text-sm text-muted-foreground">
+                Envie uma foto de capa em “Fotos” para ver a prévia.
+              </p>
+            )}
+            <div
+              className="relative px-4 text-center"
+              style={draft.hero_text_color ? { color: draft.hero_text_color } : undefined}
+            >
+              <p className="font-display text-2xl sm:text-3xl">
+                {wedding?.bride_name ?? "Noiva"} & {wedding?.groom_name ?? "Noivo"}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
@@ -194,6 +314,34 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
                 <SelectItem value="inteira">Mostrar a foto inteira (sem cortar)</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2 sm:col-span-3">
+            <Label htmlFor="hero-pos-x">Mover a foto na horizontal: {draft.hero_pos_x}%</Label>
+            <input
+              id="hero-pos-x"
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={draft.hero_pos_x}
+              onChange={(e) => setDraft({ ...draft, hero_pos_x: Number(e.target.value) })}
+              className="w-full accent-[var(--primary)]"
+            />
+            <Label htmlFor="hero-pos-y">Mover a foto na vertical: {draft.hero_pos_y}%</Label>
+            <input
+              id="hero-pos-y"
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={draft.hero_pos_y}
+              onChange={(e) => setDraft({ ...draft, hero_pos_y: Number(e.target.value) })}
+              className="w-full accent-[var(--primary)]"
+            />
+            <p className="text-xs text-muted-foreground">
+              Use para centralizar os rostos quando a foto ficar cortada.
+            </p>
           </div>
 
           <div className="space-y-2">

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { countdownParts, formatWeddingDate, useWedding } from "@/hooks/useWedding";
 import { getWeddingPreview } from "@/lib/wedding-public.functions";
+import { CoupleSection } from "@/components/CoupleSection";
 
 export const Route = createFileRoute("/casamento/$slug/")({
   loader: ({ params }) => getWeddingPreview({ data: { slug: params.slug } }),
@@ -136,6 +137,14 @@ function WeddingHome() {
         {wedding.welcome_message ??
           "Nossa felicidade é ainda maior quando compartilhada. Esperamos você para celebrar com a gente!"}
       </p>
+
+      <CoupleSection
+        brideName={wedding.bride_name}
+        groomName={wedding.groom_name}
+        bridePhotoUrl={wedding.bride_photo_url}
+        groomPhotoUrl={wedding.groom_photo_url}
+        intro={wedding.couple_intro}
+      />
 
       <div className="mt-16 grid gap-6 sm:grid-cols-2">
         {shortcuts.map((item) => (

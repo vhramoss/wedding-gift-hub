@@ -1,6 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+/** Casamento em que a pessoa foi adicionada como co-titular (ex.: a noiva). */
+async function fetchCoOwnedWedding(userId: string) {
+  const link = await supabase
+    .from("wedding_owners")
+    .select("wedding_id")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (link.error) throw link.error;
+  if (!link.data?.wedding_id) return null;
+  const { data, error } = await supabase
+    .from("weddings")
+    .select("*")
+    .eq("id", link.data.wedding_id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 /** O casamento do site (modelo de um casal só). */
 export function useMainWedding() {
   return useQuery({
@@ -32,7 +52,8 @@ export function useMyWedding(userId: string | undefined) {
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      if (data) return data;
+      return await fetchCoOwnedWedding(userId!);
     },
   });
 }
@@ -55,6 +76,9 @@ export function useHomeWedding(userId: string | undefined) {
         .maybeSingle();
       if (own.error) throw own.error;
       if (own.data) return own.data;
+
+      const coOwned = await fetchCoOwnedWedding(userId!);
+      if (coOwned) return coOwned;
 
       const rsvp = await supabase
         .from("rsvps")

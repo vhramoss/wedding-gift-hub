@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, MapPin, ShoppingBag } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { themeStyle } from "@/lib/theme";
 import { formatWeddingDate, useWedding } from "@/hooks/useWedding";
+import { useSession } from "@/hooks/useSession";
+import { CartProvider, useCart } from "@/lib/cart";
 
 export const Route = createFileRoute("/casamento/$slug")({
   component: WeddingLayout,
@@ -35,9 +37,28 @@ const HERO_HEIGHTS: Record<string, string> = {
 };
 
 
+function CartNavLink({ slug }: { slug: string }) {
+  const cart = useCart();
+  if (cart.count === 0) return null;
+  return (
+    <Link
+      to="/casamento/$slug/carrinho"
+      params={{ slug }}
+      className="relative shrink-0 whitespace-nowrap rounded-full border border-accent px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-accent transition-colors hover:bg-accent hover:text-accent-foreground sm:text-xs"
+    >
+      <ShoppingBag className="mr-1 inline size-3.5" />
+      Carrinho
+      <span className="ml-1 rounded-full bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">
+        {cart.count}
+      </span>
+    </Link>
+  );
+}
+
 function WeddingLayout() {
   const { slug } = Route.useParams();
   const { data: wedding, isLoading } = useWedding(slug);
+  const { user, loading: loadingSession } = useSession();
   const [heroIndex, setHeroIndex] = useState(0);
 
   const coverPhotosQuery = useQuery({
@@ -99,11 +120,16 @@ function WeddingLayout() {
   const opacity = Math.min(100, Math.max(0, wedding.hero_opacity ?? 30)) / 100;
   const heightClass = HERO_HEIGHTS[wedding.hero_height ?? "grande"] ?? HERO_HEIGHTS["grande"];
   const fitClass = wedding.hero_fit === "inteira" ? "object-contain" : "object-cover";
+  const objectPosition = `${Math.min(100, Math.max(0, wedding.hero_pos_x ?? 50))}% ${Math.min(
+    100,
+    Math.max(0, wedding.hero_pos_y ?? 50),
+  )}%`;
   const heroTextStyle = wedding.hero_text_color
     ? ({ color: wedding.hero_text_color } as const)
     : undefined;
 
   return (
+    <CartProvider slug={slug}>
     <div className="min-h-screen bg-background" style={themeStyle(wedding)}>
       <SiteHeader />
 
@@ -146,13 +172,16 @@ function WeddingLayout() {
             >
               Presentes
             </Link>
-            <Link
-              to="/casamento/$slug/confirmar"
-              params={{ slug }}
-              className="shrink-0 whitespace-nowrap rounded-full bg-primary px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-primary-foreground transition-opacity hover:opacity-90 sm:text-xs"
-            >
-              Presença
-            </Link>
+            <CartNavLink slug={slug} />
+            {!loadingSession && user ? (
+              <Link
+                to="/casamento/$slug/confirmar"
+                params={{ slug }}
+                className="shrink-0 whitespace-nowrap rounded-full bg-primary px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-primary-foreground transition-opacity hover:opacity-90 sm:text-xs"
+              >
+                Presença
+              </Link>
+            ) : null}
           </div>
         </div>
       </nav>
@@ -167,10 +196,17 @@ function WeddingLayout() {
             src={src}
             alt={`${wedding.bride_name} e ${wedding.groom_name}`}
             className={`absolute inset-0 size-full ${fitClass} transition-opacity duration-1000`}
-            style={{ opacity: i === heroIndex % covers.length ? opacity : 0 }}
+            style={{ opacity: i === heroIndex % covers.length ? opacity : 0, objectPosition }}
           />
         ))}
         <div className="relative mx-auto max-w-5xl px-4 py-12 text-center sm:py-20" style={heroTextStyle}>
+          {wedding.monogram ? (
+            <div className="mx-auto mb-6 w-fit border px-6 py-4 font-display text-2xl tracking-[0.35em] sm:px-10 sm:py-6 sm:text-3xl"
+              style={{ borderColor: wedding.hero_text_color ?? "currentColor" }}
+            >
+              {wedding.monogram}
+            </div>
+          ) : null}
           <h1 className="text-balance-title font-display text-4xl font-semibold sm:text-6xl md:text-7xl">
             {wedding.bride_name}{" "}
             <span className={wedding.hero_text_color ? "" : "text-accent"}>&</span>{" "}
@@ -230,5 +266,6 @@ function WeddingLayout() {
         />
       ) : null}
     </div>
+    </CartProvider>
   );
 }

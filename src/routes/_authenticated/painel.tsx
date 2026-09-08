@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AnnouncementsTab } from "@/components/admin/AnnouncementsTab";
 import { InviteManager } from "@/components/InviteManager";
+import { CoOwnersCard } from "@/components/admin/CoOwnersCard";
 import { VendorDirectory } from "@/components/VendorDirectory";
 import { AppearanceTab } from "@/components/admin/AppearanceTab";
 import { FinanceTab } from "@/components/admin/FinanceTab";
@@ -620,7 +621,8 @@ function CouplePanel() {
             <GuestListTab weddingId={weddingId} />
           </TabsContent>
 
-          <TabsContent value="invites" className="mt-6">
+          <TabsContent value="invites" className="mt-6 space-y-6">
+            <CoOwnersCard weddingId={weddingId} />
             <InviteManager
               weddingId={weddingId}
               roles={["guest"]}

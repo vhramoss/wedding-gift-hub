@@ -328,6 +328,61 @@ export const createGiftOrder = createServerFn({ method: "POST" })
     };
   });
 
+/**
+ * Cria um pedido de carrinho (vários presentes somados num único pagamento).
+ * Os valores são calculados no banco; o navegador só envia os itens escolhidos.
+ */
+export const createCartOrder = createServerFn({ method: "POST" })
+  .inputValidator((data) =>
+    z
+      .object({
+        items: z
+          .array(
+            z.object({
+              giftId: z.string().uuid(),
+              shares: z.number().int().min(1).max(100).default(1),
+            }),
+          )
+          .min(1)
+          .max(30),
+        method: z.enum(["pix", "debit", "credit"]),
+        installments: z.number().int().min(1).max(12).default(1),
+        message: z.string().max(500).optional().default(""),
+        guestName: z.string().max(120).optional().default(""),
+        guestEmail: z.string().max(160).optional().default(""),
+        guestPhone: z.string().max(40).optional().default(""),
+        guestCpf: z.string().max(20).optional().default(""),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { supabase } = await currentClient();
+    const { data: result, error } = await supabase.rpc("create_cart_order", {
+      p_items: data.items.map((i) => ({ gift_id: i.giftId, shares: i.shares })),
+      p_method: data.method,
+      p_installments: data.installments,
+      p_message: data.message,
+      p_guest_name: data.guestName,
+      p_guest_email: data.guestEmail,
+      p_guest_phone: data.guestPhone,
+      p_guest_cpf: data.guestCpf,
+    });
+    if (error) throw error;
+    const row = (result ?? []) as {
+      cart_id: string;
+      order_id: string;
+      total_cents: number;
+      installments: number;
+    }[];
+    if (!row[0]) throw new Error("Não foi possível criar o pedido.");
+    return {
+      cartId: row[0].cart_id,
+      orderId: row[0].order_id,
+      totalCents: row[0].total_cents,
+      installments: row[0].installments,
+    };
+  });
+
 type PublicOrder = {
   id: string;
   wedding_id: string;
@@ -338,7 +393,23 @@ type PublicOrder = {
   total_cents: number;
   commission_cents: number;
   gift_name: string | null;
+  cart_id: string | null;
+  cart_total_cents: number | null;
+  cart_commission_cents: number | null;
+  cart_items: number | null;
 };
+
+/** Valor e comissão cobrados: soma do carrinho quando houver. */
+function chargeTotals(order: PublicOrder) {
+  return {
+    totalCents: order.cart_total_cents ?? order.total_cents,
+    commissionCents: order.cart_commission_cents ?? order.commission_cents ?? 0,
+    description:
+      (order.cart_items ?? 1) > 1
+        ? `Presentes (${order.cart_items} itens)`
+        : `Presente: ${order.gift_name ?? "Lista de presentes"}`,
+  };
+}
 
 /** Lê o pedido pelo código, funcionando com ou sem login. */
 async function loadOrder(
@@ -379,16 +450,17 @@ export const createPixPayment = createServerFn({ method: "POST" })
     if (order.payment_method !== "pix") throw new Error("Pedido não é Pix.");
     if (order.status !== "pending") throw new Error("Pedido não está pendente.");
 
+    const totals = chargeTotals(order);
     const collector = await resolveCollector(
       supabase,
       order.wedding_id,
-      order.commission_cents ?? 0,
+      totals.commissionCents,
     );
 
     const payment = await mpCreatePayment(
       {
-        transaction_amount: order.total_cents / 100,
-        description: `Presente: ${order.gift_name ?? "Lista de presentes"}`,
+        transaction_amount: totals.totalCents / 100,
+        description: totals.description,
         payment_method_id: "pix",
         payer: {
           email:
@@ -434,7 +506,7 @@ export const createPixPayment = createServerFn({ method: "POST" })
       paymentId: payment.id,
       qrCode,
       qrCodeBase64,
-      totalCents: order.total_cents,
+      totalCents: totals.totalCents,
     };
   });
 
@@ -467,17 +539,18 @@ export const processCardPayment = createServerFn({ method: "POST" })
     const installments =
       order.payment_method === "debit" ? 1 : (order.installments ?? 1);
 
+    const totals = chargeTotals(order);
     const collector = await resolveCollector(
       supabase,
       order.wedding_id,
-      order.commission_cents ?? 0,
+      totals.commissionCents,
     );
 
     const payment = await mpCreatePayment(
       {
-        transaction_amount: order.total_cents / 100,
+        transaction_amount: totals.totalCents / 100,
         token: data.token,
-        description: `Presente: ${order.gift_name ?? "Lista de presentes"}`,
+        description: totals.description,
         installments,
         payment_method_id: data.paymentMethodId,
         issuer_id: data.issuerId || undefined,

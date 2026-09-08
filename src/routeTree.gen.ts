@@ -24,6 +24,7 @@ import { Route as AuthenticatedConviteTokenRouteImport } from './routes/_authent
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago-webhook'
 import { Route as CasamentoSlugIndexRouteImport } from './routes/casamento.$slug.index'
 import { Route as CasamentoSlugAvisosRouteImport } from './routes/casamento.$slug.avisos'
+import { Route as CasamentoSlugCarrinhoRouteImport } from './routes/casamento.$slug.carrinho'
 import { Route as CasamentoSlugConfirmarRouteImport } from './routes/casamento.$slug.confirmar'
 import { Route as CasamentoSlugFestaRouteImport } from './routes/casamento.$slug.festa'
 import { Route as CasamentoSlugFornecedoresRouteImport } from './routes/casamento.$slug.fornecedores'
@@ -113,6 +114,11 @@ const CasamentoSlugAvisosRoute = CasamentoSlugAvisosRouteImport.update({
   path: '/avisos',
   getParentRoute: () => CasamentoSlugRoute,
 } as any)
+const CasamentoSlugCarrinhoRoute = CasamentoSlugCarrinhoRouteImport.update({
+  id: '/carrinho',
+  path: '/carrinho',
+  getParentRoute: () => CasamentoSlugRoute,
+} as any)
 const CasamentoSlugConfirmarRoute = CasamentoSlugConfirmarRouteImport.update({
   id: '/confirmar',
   path: '/confirmar',
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/convite/$token': typeof AuthenticatedConviteTokenRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
+  '/casamento/$slug/carrinho': typeof CasamentoSlugCarrinhoRoute
   '/casamento/$slug/confirmar': typeof CasamentoSlugConfirmarRoute
   '/casamento/$slug/festa': typeof CasamentoSlugFestaRoute
   '/casamento/$slug/fornecedores': typeof CasamentoSlugFornecedoresRoute
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/convite/$token': typeof AuthenticatedConviteTokenRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
+  '/casamento/$slug/carrinho': typeof CasamentoSlugCarrinhoRoute
   '/casamento/$slug/confirmar': typeof CasamentoSlugConfirmarRoute
   '/casamento/$slug/festa': typeof CasamentoSlugFestaRoute
   '/casamento/$slug/fornecedores': typeof CasamentoSlugFornecedoresRoute
@@ -233,6 +241,7 @@ export interface FileRoutesById {
   '/_authenticated/convite/$token': typeof AuthenticatedConviteTokenRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
+  '/casamento/$slug/carrinho': typeof CasamentoSlugCarrinhoRoute
   '/casamento/$slug/confirmar': typeof CasamentoSlugConfirmarRoute
   '/casamento/$slug/festa': typeof CasamentoSlugFestaRoute
   '/casamento/$slug/fornecedores': typeof CasamentoSlugFornecedoresRoute
@@ -261,6 +270,7 @@ export interface FileRouteTypes {
     | '/convite/$token'
     | '/api/public/mercadopago-webhook'
     | '/casamento/$slug/avisos'
+    | '/casamento/$slug/carrinho'
     | '/casamento/$slug/confirmar'
     | '/casamento/$slug/festa'
     | '/casamento/$slug/fornecedores'
@@ -286,6 +296,7 @@ export interface FileRouteTypes {
     | '/convite/$token'
     | '/api/public/mercadopago-webhook'
     | '/casamento/$slug/avisos'
+    | '/casamento/$slug/carrinho'
     | '/casamento/$slug/confirmar'
     | '/casamento/$slug/festa'
     | '/casamento/$slug/fornecedores'
@@ -313,6 +324,7 @@ export interface FileRouteTypes {
     | '/_authenticated/convite/$token'
     | '/api/public/mercadopago-webhook'
     | '/casamento/$slug/avisos'
+    | '/casamento/$slug/carrinho'
     | '/casamento/$slug/confirmar'
     | '/casamento/$slug/festa'
     | '/casamento/$slug/fornecedores'
@@ -444,6 +456,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CasamentoSlugAvisosRouteImport
       parentRoute: typeof CasamentoSlugRoute
     }
+    '/casamento/$slug/carrinho': {
+      id: '/casamento/$slug/carrinho'
+      path: '/carrinho'
+      fullPath: '/casamento/$slug/carrinho'
+      preLoaderRoute: typeof CasamentoSlugCarrinhoRouteImport
+      parentRoute: typeof CasamentoSlugRoute
+    }
     '/casamento/$slug/confirmar': {
       id: '/casamento/$slug/confirmar'
       path: '/confirmar'
@@ -538,6 +557,7 @@ const AuthenticatedRouteRouteWithChildren =
 
 interface CasamentoSlugRouteChildren {
   CasamentoSlugAvisosRoute: typeof CasamentoSlugAvisosRoute
+  CasamentoSlugCarrinhoRoute: typeof CasamentoSlugCarrinhoRoute
   CasamentoSlugConfirmarRoute: typeof CasamentoSlugConfirmarRoute
   CasamentoSlugFestaRoute: typeof CasamentoSlugFestaRoute
   CasamentoSlugFornecedoresRoute: typeof CasamentoSlugFornecedoresRoute
@@ -553,6 +573,7 @@ interface CasamentoSlugRouteChildren {
 
 const CasamentoSlugRouteChildren: CasamentoSlugRouteChildren = {
   CasamentoSlugAvisosRoute: CasamentoSlugAvisosRoute,
+  CasamentoSlugCarrinhoRoute: CasamentoSlugCarrinhoRoute,
   CasamentoSlugConfirmarRoute: CasamentoSlugConfirmarRoute,
   CasamentoSlugFestaRoute: CasamentoSlugFestaRoute,
   CasamentoSlugFornecedoresRoute: CasamentoSlugFornecedoresRoute,
