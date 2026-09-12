@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatBRL } from "@/lib/br";
 import { useWedding } from "@/hooks/useWedding";
+import { giftQuoteKey, useGiftQuotes } from "@/hooks/useGiftQuotes";
 import { useCart } from "@/lib/cart";
 import { toast } from "sonner";
 
@@ -50,6 +51,18 @@ function GiftsPage() {
   });
 
   const gifts = giftsQuery.data ?? [];
+  const quotesQuery = useGiftQuotes(gifts.map((gift) => ({ giftId: gift.id, shares: 1 })));
+  const quotes = quotesQuery.data;
+  const cartQuotesQuery = useGiftQuotes(
+    cart.items.map((item) => ({ giftId: item.giftId, shares: item.shares })),
+  );
+  const cartTotal = cart.items.reduce(
+    (sum, item) =>
+      sum +
+      (cartQuotesQuery.data?.get(giftQuoteKey(item.giftId, item.shares))?.total_cents ??
+        item.unitCents * item.shares),
+    0,
+  );
   const categories = ["todos", ...new Set(gifts.map((g) => g.category).filter(Boolean) as string[])];
   const visible = category === "todos" ? gifts : gifts.filter((g) => g.category === category);
 
@@ -67,7 +80,7 @@ function GiftsPage() {
           <p className="text-sm">
             <ShoppingBag className="mr-2 inline size-4 text-accent" />
             {cart.count} presente{cart.count > 1 ? "s" : ""} no carrinho ·{" "}
-            <strong>{formatBRL(cart.totalCents)}</strong>
+            <strong>{formatBRL(cartTotal)}</strong>
           </p>
           <Button asChild size="sm">
             <Link to="/casamento/$slug/carrinho" params={{ slug }}>
@@ -111,6 +124,8 @@ function GiftsPage() {
             const sharesTotal = Math.max(1, gift.shares_total ?? 1);
             const sharesLeft = Math.max(0, sharesTotal - gift.purchased_count);
             const sharePrice = Math.ceil(gift.price_cents / sharesTotal);
+            const displayedPrice =
+              quotes?.get(giftQuoteKey(gift.id, 1))?.total_cents ?? sharePrice;
             const soldOut =
               sharesTotal > 1
                 ? sharesLeft === 0
@@ -142,7 +157,7 @@ function GiftsPage() {
                     <p className="text-sm text-muted-foreground">{gift.description}</p>
                   ) : null}
                   <p className="mt-1 font-display text-3xl text-primary">
-                    {formatBRL(sharesTotal > 1 ? sharePrice : gift.price_cents)}
+                    {formatBRL(displayedPrice)}
                   </p>
                   {sharesTotal > 1 ? (
                     <div className="space-y-1">
@@ -169,7 +184,7 @@ function GiftsPage() {
                         giftId: gift.id,
                         name: gift.name,
                         imageUrl: gift.image_url,
-                        unitCents: sharesTotal > 1 ? sharePrice : gift.price_cents,
+                        unitCents: displayedPrice,
                         shares: 1,
                         maxShares: sharesTotal > 1 ? sharesLeft : 1,
                         isShared: sharesTotal > 1,

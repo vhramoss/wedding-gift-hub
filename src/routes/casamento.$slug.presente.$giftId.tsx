@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSession } from "@/hooks/useSession";
+import { giftQuoteKey, useGiftQuotes } from "@/hooks/useGiftQuotes";
 import { computeCharge, formatBRL, PAYMENT_LABELS, type PaymentMethod } from "@/lib/br";
 import {
   createGiftOrder,
@@ -116,7 +117,7 @@ function CheckoutPage() {
       const { data, error } = await supabase
         .from("gifts")
         .select(
-          "*, weddings!inner(id, slug, bride_name, groom_name, commission_percent, commission_paid_by)",
+          "*, weddings!inner(id, slug, bride_name, groom_name)",
         )
         .eq("id", giftId)
         .maybeSingle();
@@ -144,13 +145,15 @@ function CheckoutPage() {
   const sharePriceCents = Math.ceil((gift?.price_cents ?? 0) / sharesTotal);
   const sharesLeft = Math.max(0, sharesTotal - (gift?.purchased_count ?? 0));
   const baseCents = sharesTotal > 1 ? sharePriceCents * shares : (gift?.price_cents ?? 0);
-
-  // Taxa de serviço repassada ao convidado (quando o casal escolhe esse modelo).
-  const serviceCents =
-    wedding?.commission_paid_by === "guest"
-      ? Math.max(0, Math.round((baseCents * Number(wedding.commission_percent ?? 0)) / 100))
-      : 0;
-  const chargeBase = baseCents + serviceCents;
+  const shareOptions = gift
+    ? Array.from({ length: Math.min(10, sharesLeft) }, (_, index) => ({
+        giftId: gift.id,
+        shares: index + 1,
+      }))
+    : [];
+  const quoteQuery = useGiftQuotes(shareOptions);
+  const chargeBase =
+    quoteQuery.data?.get(giftQuoteKey(giftId, shares))?.total_cents ?? baseCents;
 
   const charge = useMemo(
     () => computeCharge(chargeBase, method, installments),
@@ -584,7 +587,11 @@ function CheckoutPage() {
                   <SelectContent>
                     {Array.from({ length: Math.max(1, sharesLeft) }, (_, i) => i + 1).map((n) => (
                       <SelectItem key={n} value={String(n)}>
-                        {n} cota{n > 1 ? "s" : ""} — {formatBRL(sharePriceCents * n)}
+                        {n} cota{n > 1 ? "s" : ""} —{" "}
+                        {formatBRL(
+                          quoteQuery.data?.get(giftQuoteKey(giftId, n))?.total_cents ??
+                            sharePriceCents * n,
+                        )}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -661,7 +668,7 @@ function CheckoutPage() {
               <span className="text-muted-foreground">
                 {sharesTotal > 1 ? `${shares} cota(s)` : "Valor do presente"}
               </span>
-              <span>{formatBRL(baseCents + serviceCents)}</span>
+              <span>{formatBRL(chargeBase)}</span>
             </div>
 
             <div className="flex justify-between">

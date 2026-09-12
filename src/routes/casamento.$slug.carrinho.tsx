@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { useSession } from "@/hooks/useSession";
 import { useWedding } from "@/hooks/useWedding";
+import { giftQuoteKey, useGiftQuotes } from "@/hooks/useGiftQuotes";
 import { useCart } from "@/lib/cart";
 import { computeCharge, formatBRL, PAYMENT_LABELS, type PaymentMethod } from "@/lib/br";
 import {
@@ -111,12 +112,15 @@ function CartPage() {
     retry: 1,
   });
 
-  const baseCents = cart.totalCents;
-  const serviceCents =
-    wedding?.commission_paid_by === "guest"
-      ? Math.max(0, Math.round((baseCents * Number(wedding.commission_percent ?? 0)) / 100))
-      : 0;
-  const chargeBase = baseCents + serviceCents;
+  const quoteItems = cart.items.map((item) => ({ giftId: item.giftId, shares: item.shares }));
+  const quotesQuery = useGiftQuotes(quoteItems);
+  const quotedItems = cart.items.map((item) => ({
+    ...item,
+    totalCents:
+      quotesQuery.data?.get(giftQuoteKey(item.giftId, item.shares))?.total_cents ??
+      item.unitCents * item.shares,
+  }));
+  const chargeBase = quotedItems.reduce((sum, item) => sum + item.totalCents, 0);
   const charge = useMemo(
     () => computeCharge(chargeBase, method, installments),
     [chargeBase, method, installments],
@@ -399,7 +403,7 @@ function CartPage() {
 
         <Card className="shadow-card">
           <CardContent className="divide-y p-0">
-            {cart.items.map((item) => (
+            {quotedItems.map((item) => (
               <div key={item.giftId} className="flex items-center gap-4 p-4">
                 <div className="size-16 shrink-0 overflow-hidden rounded-md bg-secondary/60">
                   {item.imageUrl ? (
@@ -413,7 +417,9 @@ function CartPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{item.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {item.isShared ? `${formatBRL(item.unitCents)} por cota` : formatBRL(item.unitCents)}
+                    {item.isShared
+                      ? `${formatBRL(Math.round(item.totalCents / item.shares))} por cota`
+                      : formatBRL(item.totalCents)}
                   </p>
                   {item.isShared ? (
                     <div className="mt-2 flex items-center gap-2">
@@ -442,7 +448,7 @@ function CartPage() {
                   ) : null}
                 </div>
                 <div className="text-right">
-                  <p className="font-medium">{formatBRL(item.unitCents * item.shares)}</p>
+                  <p className="font-medium">{formatBRL(item.totalCents)}</p>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -577,18 +583,18 @@ function CartPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {cart.items.map((i) => (
+            {quotedItems.map((i) => (
               <div key={i.giftId} className="flex justify-between gap-3">
                 <span className="truncate text-muted-foreground">
                   {i.name}
                   {i.isShared ? ` (${i.shares}x)` : ""}
                 </span>
-                <span>{formatBRL(i.unitCents * i.shares)}</span>
+                <span>{formatBRL(i.totalCents)}</span>
               </div>
             ))}
             <Separator />
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
+              <span className="text-muted-foreground">Presentes</span>
               <span>{formatBRL(chargeBase)}</span>
             </div>
             <div className="flex justify-between">

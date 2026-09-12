@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "first user can claim admin" ON public.user_roles;

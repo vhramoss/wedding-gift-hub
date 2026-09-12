@@ -1292,6 +1292,16 @@ export type Database = {
         Args: { p_body: string; p_name: string; p_wedding_id: string }
         Returns: undefined
       }
+      public_gift_quote: {
+        Args: { p_items: Json }
+        Returns: {
+          amount_cents: number
+          gift_id: string
+          service_cents: number
+          shares: number
+          total_cents: number
+        }[]
+      }
       public_order_status: {
         Args: { p_order_id: string }
         Returns: {
