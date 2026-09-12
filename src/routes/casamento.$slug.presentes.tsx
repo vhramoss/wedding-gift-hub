@@ -51,7 +51,22 @@ function GiftsPage() {
   });
 
   const gifts = giftsQuery.data ?? [];
-  const quotesQuery = useGiftQuotes(gifts.map((gift) => ({ giftId: gift.id, shares: 1 })));
+
+  /** Taxa de serviço embutida quando quem paga é o convidado. */
+  const commissionPercent = Number(wedding?.commission_percent ?? 0);
+  const guestPaysFee = wedding?.commission_paid_by === "guest";
+  const withFee = (baseCents: number) =>
+    guestPaysFee
+      ? baseCents + Math.max(0, Math.round((baseCents * commissionPercent) / 100))
+      : baseCents;
+
+  const availableGifts = gifts.filter((gift) => {
+    const total = Math.max(1, gift.shares_total ?? 1);
+    return total > 1
+      ? total - gift.purchased_count > 0
+      : !(gift.quantity > 0 && gift.purchased_count >= gift.quantity);
+  });
+  const quotesQuery = useGiftQuotes(availableGifts.map((gift) => ({ giftId: gift.id, shares: 1 })));
   const quotes = quotesQuery.data;
   const cartQuotesQuery = useGiftQuotes(
     cart.items.map((item) => ({ giftId: item.giftId, shares: item.shares })),
@@ -125,7 +140,7 @@ function GiftsPage() {
             const sharesLeft = Math.max(0, sharesTotal - gift.purchased_count);
             const sharePrice = Math.ceil(gift.price_cents / sharesTotal);
             const displayedPrice =
-              quotes?.get(giftQuoteKey(gift.id, 1))?.total_cents ?? sharePrice;
+              quotes?.get(giftQuoteKey(gift.id, 1))?.total_cents ?? withFee(sharePrice);
             const soldOut =
               sharesTotal > 1
                 ? sharesLeft === 0
@@ -162,7 +177,7 @@ function GiftsPage() {
                   {sharesTotal > 1 ? (
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">
-                        Por cota · {formatBRL(gift.price_cents)} no total ·{" "}
+                        Por cota · {formatBRL(withFee(gift.price_cents))} no total ·{" "}
                         {sharesTotal - sharesLeft} de {sharesTotal} cotas presenteadas
                       </p>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
