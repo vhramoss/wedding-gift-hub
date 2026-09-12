@@ -1,5 +1,9 @@
 export function formatBRL(cents: number): string {
-  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const reais = Math.abs(cents / 100);
+  const sign = cents < 0 ? "-" : "";
+  const parts = reais.toFixed(2).split(".");
+  const intPart = Number(parts[0]).toLocaleString("pt-BR");
+  return `${sign}R$ ${intPart},${parts[1]}`;
 }
 
 export function onlyDigits(value: string): string {
