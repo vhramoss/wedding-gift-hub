@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PaymentAccountTab } from "@/components/painel/PaymentAccountTab";
 import { PayoutSummary } from "@/components/painel/PayoutSummary";
 import { NotificationsTab } from "@/components/painel/NotificationsTab";
+import { RemindersTab } from "@/components/painel/RemindersTab";
 import { GuestListTab } from "@/components/painel/GuestListTab";
 import { whatsappLink } from "@/lib/brand";
 import { downloadCsv } from "@/lib/csv";
@@ -357,6 +358,7 @@ function CouplePanel() {
             <TabsTrigger value="photos">Fotos</TabsTrigger>
             <TabsTrigger value="extras">Capa e música</TabsTrigger>
             <TabsTrigger value="announcements">Avisos</TabsTrigger>
+            <TabsTrigger value="reminders">Save the date</TabsTrigger>
             <TabsTrigger value="notifications">Novidades</TabsTrigger>
             <TabsTrigger value="gifts">Presentes</TabsTrigger>
             <TabsTrigger value="orders">Pedidos</TabsTrigger>
@@ -615,6 +617,10 @@ function CouplePanel() {
             {(ordersQuery.data ?? []).length === 0 ? (
               <p className="text-muted-foreground">Nenhum pedido ainda.</p>
             ) : null}
+          </TabsContent>
+
+          <TabsContent value="reminders" className="mt-6">
+            <RemindersTab weddingId={weddingId} />
           </TabsContent>
 
           <TabsContent value="rsvps" className="mt-6">

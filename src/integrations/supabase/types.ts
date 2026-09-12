@@ -443,6 +443,41 @@ export type Database = {
           },
         ]
       }
+      wedding_fee_tiers: {
+        Row: {
+          created_at: string
+          id: string
+          percent: number
+          up_to_cents: number | null
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          percent?: number
+          up_to_cents?: number | null
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          percent?: number
+          up_to_cents?: number | null
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_fee_tiers_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wedding_guests: {
         Row: {
           attending: boolean | null
@@ -860,6 +895,56 @@ export type Database = {
           },
         ]
       }
+      wedding_reminders: {
+        Row: {
+          audience: string
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          recipients_count: number
+          send_on: string | null
+          sent_at: string | null
+          title: string
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          audience?: string
+          body: string
+          created_at?: string
+          id?: string
+          kind?: string
+          recipients_count?: number
+          send_on?: string | null
+          sent_at?: string | null
+          title: string
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          audience?: string
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          recipients_count?: number
+          send_on?: string | null
+          sent_at?: string | null
+          title?: string
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_reminders_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       weddings: {
         Row: {
           approval_note: string | null
@@ -911,6 +996,7 @@ export type Database = {
           plan_paid: boolean
           plan_started_on: string | null
           published: boolean
+          require_login: boolean
           rsvp_deadline: string | null
           rsvp_reminder_days: number
           rsvp_reminder_enabled: boolean
@@ -982,6 +1068,7 @@ export type Database = {
           plan_paid?: boolean
           plan_started_on?: string | null
           published?: boolean
+          require_login?: boolean
           rsvp_deadline?: string | null
           rsvp_reminder_days?: number
           rsvp_reminder_enabled?: boolean
@@ -1053,6 +1140,7 @@ export type Database = {
           plan_paid?: boolean
           plan_started_on?: string | null
           published?: boolean
+          require_login?: boolean
           rsvp_deadline?: string | null
           rsvp_reminder_days?: number
           rsvp_reminder_enabled?: boolean
@@ -1081,6 +1169,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      commission_percent_for: {
+        Args: { _amount_cents: number; _wedding_id: string }
+        Returns: number
+      }
       compute_charge: {
         Args: {
           p_amount_cents: number

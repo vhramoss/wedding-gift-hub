@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.commission_percent_for(uuid, integer) FROM anon, authenticated, public;

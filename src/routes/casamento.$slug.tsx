@@ -115,6 +115,23 @@ function WeddingLayout() {
     );
   }
 
+  if (wedding.require_login && !loadingSession && !user) {
+    return (
+      <div className="min-h-screen">
+        <SiteHeader />
+        <div className="mx-auto max-w-xl p-16 text-center">
+          <h1 className="font-display text-3xl">Site dos noivos</h1>
+          <p className="mt-3 text-muted-foreground">
+            Os noivos deixaram este site só para convidados. Entre com sua conta para ver tudo.
+          </p>
+          <Button asChild className="mt-6">
+            <Link to="/auth">Entrar</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const initials = `${wedding.bride_name.charAt(0)} + ${wedding.groom_name.charAt(0)}`;
   const date = formatWeddingDate(wedding.wedding_date);
   const opacity = Math.min(100, Math.max(0, wedding.hero_opacity ?? 30)) / 100;

@@ -62,7 +62,7 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
       const { data, error } = await supabase
         .from("weddings")
         .select(
-          "id, bride_name, groom_name, published, cover_image_url, hero_opacity, hero_height, hero_fit, hero_text_color, hero_pos_x, hero_pos_y, hero_rotate_seconds, music_enabled, music_autoplay, music_url, music_title",
+          "id, bride_name, groom_name, published, require_login, cover_image_url, hero_opacity, hero_height, hero_fit, hero_text_color, hero_pos_x, hero_pos_y, hero_rotate_seconds, music_enabled, music_autoplay, music_url, music_title",
         )
         .eq("id", weddingId!)
         .maybeSingle();
@@ -88,15 +88,46 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
 
   const togglePublished = useMutation({
     mutationFn: async (value: boolean) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("weddings")
         .update({ published: value })
-        .eq("id", weddingId!);
+        .eq("id", weddingId!)
+        .select("id, published")
+        .maybeSingle();
       if (error) throw error;
-      return value;
+      if (!data || data.published !== value) {
+        throw new Error("A alteração não foi confirmada. Atualize a página e tente novamente.");
+      }
+      return data.published;
     },
     onSuccess: (value) => {
       toast.success(value ? "Site publicado! O link já abre para qualquer pessoa." : "Site voltou a ficar privado.");
+      queryClient.invalidateQueries({ queryKey: ["panel", "extras", weddingId] });
+      queryClient.invalidateQueries({ queryKey: ["wedding"] });
+    },
+    onError: (e: Error) => toast.error("Não deu para mudar", { description: e.message }),
+  });
+
+  const toggleRequireLogin = useMutation({
+    mutationFn: async (value: boolean) => {
+      const { data, error } = await supabase
+        .from("weddings")
+        .update({ require_login: value })
+        .eq("id", weddingId!)
+        .select("id, require_login")
+        .maybeSingle();
+      if (error) throw error;
+      if (!data || data.require_login !== value) {
+        throw new Error("A alteração não foi confirmada. Atualize a página e tente novamente.");
+      }
+      return data.require_login;
+    },
+    onSuccess: (value) => {
+      toast.success(
+        value
+          ? "Agora o site pede login para abrir."
+          : "Site liberado para qualquer pessoa com o link.",
+      );
       queryClient.invalidateQueries({ queryKey: ["panel", "extras", weddingId] });
       queryClient.invalidateQueries({ queryKey: ["wedding"] });
     },
@@ -180,6 +211,20 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
               checked={Boolean(wedding?.published)}
               disabled={togglePublished.isPending}
               onCheckedChange={(v) => togglePublished.mutate(v)}
+            />
+          </div>
+
+          <div className="mt-4 flex items-center justify-between rounded-lg border border-border/60 p-4">
+            <div>
+              <p className="font-medium">Pedir login para ver o site</p>
+              <p className="text-sm text-muted-foreground">
+                Ligado, só quem tem conta consegue abrir o site de vocês.
+              </p>
+            </div>
+            <Switch
+              checked={Boolean(wedding?.require_login)}
+              disabled={toggleRequireLogin.isPending}
+              onCheckedChange={(v) => toggleRequireLogin.mutate(v)}
             />
           </div>
         </CardContent>
