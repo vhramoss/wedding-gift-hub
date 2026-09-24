@@ -357,6 +357,30 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
           </div>
 
           <div className="space-y-2 sm:col-span-3">
+            <Label htmlFor="cover-url">Usar uma imagem sua (URL)</Label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                id="cover-url"
+                value={draft.cover_image_url}
+                placeholder="Cole o link de uma foto de vocês (https://...)"
+                onChange={(e) => setDraft({ ...draft, cover_image_url: e.target.value })}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDraft({ ...draft, cover_image_url: "" })}
+              >
+                <RotateCcw className="size-4" />
+                Limpar
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Cola o link de uma foto sua para usar na capa. Também dá pra subir fotos pela aba
+              “Fotos” e marcar “Mostrar na capa do site” — elas trocam sozinhas.
+            </p>
+          </div>
+
+          <div className="space-y-2 sm:col-span-3">
             <Label htmlFor="hero-title">Título da capa</Label>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input
