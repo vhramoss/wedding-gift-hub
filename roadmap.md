@@ -14,3 +14,17 @@
 - [x] Cadastro self-service dos noivos (/criar-conta) criando o próprio casamento e virando dono
 - [x] Central de novidades no painel dos noivos (presente pago / confirmação) + envio de resumo no WhatsApp
 - [ ] Teste ponta a ponta com dinheiro real (o dono do site fará)
+
+## Pedido 23/09 (fazer em partes, marcando ao concluir)
+- [x] Cerimonialista: cadastro por casamento + % sobre o lucro da plataforma (ajustado no super admin)
+- [x] Taxas padrão novas: <R$250 = 20%, R$250–1000 = 10%, >R$1000 = 5% (faixas continuam editáveis no super admin)
+- [x] Termos: seção clara de taxas
+- [x] Painel dos noivos: aba "Taxas" mostrando as faixas vigentes do casamento
+- [x] Cadastro: checkbox obrigatório "concordo com as taxas"
+- [x] Tutorial em PDF para os noivos, com link na página inicial antes de criar conta
+- [x] Convite por QR: primeiro login pede nome completo + CPF → entra na lista de convidados; RSVP busca por CPF
+
+## Pedido 24/09
+- [x] Lista fechada dos noivos com CPF (importar/exportar planilha); busca por CPF só na lista fechada
+- [x] Cadastro pelo QR vai para lista separada "perfis criados" (não entra na lista fechada)
+- [x] Convite de cerimonialista (gerado pelos noivos ou super admin): ele se cadastra com Pix e fica ligado ao casamento

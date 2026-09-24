@@ -22,6 +22,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FeesTab } from "@/components/painel/FeesTab";
+import { GuestSignupsCard } from "@/components/painel/GuestSignupsCard";
+import { PlannerInviteCard } from "@/components/PlannerInviteCard";
 import { PaymentAccountTab } from "@/components/painel/PaymentAccountTab";
 import { PayoutSummary } from "@/components/painel/PayoutSummary";
 import { NotificationsTab } from "@/components/painel/NotificationsTab";
@@ -367,6 +370,7 @@ function CouplePanel() {
             <TabsTrigger value="appearance">Aparência</TabsTrigger>
             <TabsTrigger value="finance">Financeiro</TabsTrigger>
             <TabsTrigger value="payments">Recebimento</TabsTrigger>
+            <TabsTrigger value="fees">Taxas</TabsTrigger>
             <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
           </TabsList>
 
@@ -625,6 +629,7 @@ function CouplePanel() {
 
           <TabsContent value="rsvps" className="mt-6">
             <GuestListTab weddingId={weddingId} />
+            {weddingId ? <div className="mt-6"><GuestSignupsCard weddingId={weddingId} /></div> : null}
           </TabsContent>
 
           <TabsContent value="invites" className="mt-6 space-y-6">
@@ -647,6 +652,13 @@ function CouplePanel() {
 
           <TabsContent value="payments" className="mt-6">
             <PaymentAccountTab weddingId={weddingId} />
+          </TabsContent>
+
+          <TabsContent value="fees" className="mt-6">
+            <div className="space-y-6">
+              <FeesTab weddingId={weddingId ?? ""} />
+              {weddingId ? <PlannerInviteCard weddingId={weddingId} /> : null}
+            </div>
           </TabsContent>
 
           <TabsContent value="vendors" className="mt-6">

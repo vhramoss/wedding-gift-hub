@@ -118,6 +118,29 @@ function TermsPage() {
             </p>
           </section>
 
+          <section id="taxas" className="space-y-2">
+            <h2 className="font-display text-xl text-foreground sm:text-2xl">
+              Taxas da plataforma
+            </h2>
+            <p>
+              Sobre cada presente pago pelo site é cobrada uma taxa de serviço, conforme o valor do
+              presente (ou da cota):
+            </p>
+            <ul className="list-disc space-y-1 pl-6">
+              <li>Presentes abaixo de R$ 250,00: <strong>20%</strong></li>
+              <li>Presentes de R$ 250,00 até R$ 1.000,00: <strong>10%</strong></li>
+              <li>Presentes acima de R$ 1.000,00: <strong>5%</strong></li>
+            </ul>
+            <p>
+              Essas são as taxas padrão. Condições especiais podem ser combinadas individualmente e
+              ficam registradas na aba “Taxas” do painel dos noivos, que sempre mostra as taxas
+              vigentes para o casamento. Dependendo do combinado, a taxa é descontada do valor
+              recebido pelos noivos ou somada ao valor pago pelo convidado. Juros de parcelamento no
+              cartão de crédito são pagos pelo convidado. Ao criar o site, os noivos declaram
+              concordar com estas taxas.
+            </p>
+          </section>
+
           <section className="space-y-2">
             <h2 className="font-display text-xl text-foreground sm:text-2xl">8. Foro e contato</h2>
             <p>

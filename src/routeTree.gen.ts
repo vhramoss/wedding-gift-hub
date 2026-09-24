@@ -20,6 +20,7 @@ import { Route as AuthenticatedMeusPresentesRouteImport } from './routes/_authen
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedSuperAdminRouteImport } from './routes/_authenticated/super-admin'
 import { Route as CasamentoSlugRouteImport } from './routes/casamento.$slug'
+import { Route as AuthenticatedCerimonialistaTokenRouteImport } from './routes/_authenticated/cerimonialista.$token'
 import { Route as AuthenticatedConviteTokenRouteImport } from './routes/_authenticated/convite.$token'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago-webhook'
 import { Route as CasamentoSlugIndexRouteImport } from './routes/casamento.$slug.index'
@@ -92,6 +93,12 @@ const CasamentoSlugRoute = CasamentoSlugRouteImport.update({
   path: '/casamento/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedCerimonialistaTokenRoute =
+  AuthenticatedCerimonialistaTokenRouteImport.update({
+    id: '/cerimonialista/$token',
+    path: '/cerimonialista/$token',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedConviteTokenRoute =
   AuthenticatedConviteTokenRouteImport.update({
     id: '/convite/$token',
@@ -183,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/painel': typeof AuthenticatedPainelRoute
   '/super-admin': typeof AuthenticatedSuperAdminRoute
   '/casamento/$slug': typeof CasamentoSlugRouteWithChildren
+  '/cerimonialista/$token': typeof AuthenticatedCerimonialistaTokenRoute
   '/convite/$token': typeof AuthenticatedConviteTokenRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
@@ -209,6 +217,7 @@ export interface FileRoutesByTo {
   '/meus-presentes': typeof AuthenticatedMeusPresentesRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/super-admin': typeof AuthenticatedSuperAdminRoute
+  '/cerimonialista/$token': typeof AuthenticatedCerimonialistaTokenRoute
   '/convite/$token': typeof AuthenticatedConviteTokenRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
@@ -238,6 +247,7 @@ export interface FileRoutesById {
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/super-admin': typeof AuthenticatedSuperAdminRoute
   '/casamento/$slug': typeof CasamentoSlugRouteWithChildren
+  '/_authenticated/cerimonialista/$token': typeof AuthenticatedCerimonialistaTokenRoute
   '/_authenticated/convite/$token': typeof AuthenticatedConviteTokenRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/casamento/$slug/avisos': typeof CasamentoSlugAvisosRoute
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/super-admin'
     | '/casamento/$slug'
+    | '/cerimonialista/$token'
     | '/convite/$token'
     | '/api/public/mercadopago-webhook'
     | '/casamento/$slug/avisos'
@@ -293,6 +304,7 @@ export interface FileRouteTypes {
     | '/meus-presentes'
     | '/painel'
     | '/super-admin'
+    | '/cerimonialista/$token'
     | '/convite/$token'
     | '/api/public/mercadopago-webhook'
     | '/casamento/$slug/avisos'
@@ -321,6 +333,7 @@ export interface FileRouteTypes {
     | '/_authenticated/painel'
     | '/_authenticated/super-admin'
     | '/casamento/$slug'
+    | '/_authenticated/cerimonialista/$token'
     | '/_authenticated/convite/$token'
     | '/api/public/mercadopago-webhook'
     | '/casamento/$slug/avisos'
@@ -427,6 +440,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/casamento/$slug'
       preLoaderRoute: typeof CasamentoSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/cerimonialista/$token': {
+      id: '/_authenticated/cerimonialista/$token'
+      path: '/cerimonialista/$token'
+      fullPath: '/cerimonialista/$token'
+      preLoaderRoute: typeof AuthenticatedCerimonialistaTokenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/convite/$token': {
       id: '/_authenticated/convite/$token'
@@ -541,6 +561,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMeusPresentesRoute: typeof AuthenticatedMeusPresentesRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedSuperAdminRoute: typeof AuthenticatedSuperAdminRoute
+  AuthenticatedCerimonialistaTokenRoute: typeof AuthenticatedCerimonialistaTokenRoute
   AuthenticatedConviteTokenRoute: typeof AuthenticatedConviteTokenRoute
 }
 
@@ -549,6 +570,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMeusPresentesRoute: AuthenticatedMeusPresentesRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedSuperAdminRoute: AuthenticatedSuperAdminRoute,
+  AuthenticatedCerimonialistaTokenRoute: AuthenticatedCerimonialistaTokenRoute,
   AuthenticatedConviteTokenRoute: AuthenticatedConviteTokenRoute,
 }
 

@@ -106,6 +106,7 @@ export type Database = {
           payment_method: string
           pix_payload: string | null
           pix_qr_base64: string | null
+          planner_cents: number
           provider: string
           seller_mp_user_id: number | null
           shares: number
@@ -135,6 +136,7 @@ export type Database = {
           payment_method: string
           pix_payload?: string | null
           pix_qr_base64?: string | null
+          planner_cents?: number
           provider?: string
           seller_mp_user_id?: number | null
           shares?: number
@@ -164,6 +166,7 @@ export type Database = {
           payment_method?: string
           pix_payload?: string | null
           pix_qr_base64?: string | null
+          planner_cents?: number
           provider?: string
           seller_mp_user_id?: number | null
           shares?: number
@@ -183,6 +186,47 @@ export type Database = {
           },
           {
             foreignKeyName: "orders_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planner_invites: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          token: string
+          used_at: string | null
+          used_by: string | null
+          wedding_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          token: string
+          used_at?: string | null
+          used_by?: string | null
+          wedding_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+          used_by?: string | null
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_invites_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
             referencedRelation: "weddings"
@@ -478,12 +522,58 @@ export type Database = {
           },
         ]
       }
+      wedding_guest_signups: {
+        Row: {
+          cpf: string
+          created_at: string
+          full_name: string
+          guest_id: string | null
+          id: string
+          user_id: string
+          wedding_id: string
+        }
+        Insert: {
+          cpf: string
+          created_at?: string
+          full_name: string
+          guest_id?: string | null
+          id?: string
+          user_id: string
+          wedding_id: string
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          full_name?: string
+          guest_id?: string | null
+          id?: string
+          user_id?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_guest_signups_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_guest_signups_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wedding_guests: {
         Row: {
           attending: boolean | null
           attending_ceremony: boolean | null
           attending_party: boolean | null
           companions: number
+          cpf: string | null
           created_at: string
           dietary_notes: string | null
           email: string | null
@@ -497,6 +587,7 @@ export type Database = {
           reminder_sent_at: string | null
           responded_at: string | null
           updated_at: string
+          user_id: string | null
           wedding_id: string
         }
         Insert: {
@@ -504,6 +595,7 @@ export type Database = {
           attending_ceremony?: boolean | null
           attending_party?: boolean | null
           companions?: number
+          cpf?: string | null
           created_at?: string
           dietary_notes?: string | null
           email?: string | null
@@ -517,6 +609,7 @@ export type Database = {
           reminder_sent_at?: string | null
           responded_at?: string | null
           updated_at?: string
+          user_id?: string | null
           wedding_id: string
         }
         Update: {
@@ -524,6 +617,7 @@ export type Database = {
           attending_ceremony?: boolean | null
           attending_party?: boolean | null
           companions?: number
+          cpf?: string | null
           created_at?: string
           dietary_notes?: string | null
           email?: string | null
@@ -537,6 +631,7 @@ export type Database = {
           reminder_sent_at?: string | null
           responded_at?: string | null
           updated_at?: string
+          user_id?: string | null
           wedding_id?: string
         }
         Relationships: [
@@ -963,6 +1058,7 @@ export type Database = {
           cover_image_url: string | null
           created_at: string
           dress_code: string | null
+          fees_accepted_at: string | null
           groom_name: string
           groom_photo_url: string | null
           hashtag: string | null
@@ -995,6 +1091,11 @@ export type Database = {
           plan_notes: string | null
           plan_paid: boolean
           plan_started_on: string | null
+          planner_contact: string | null
+          planner_name: string | null
+          planner_percent: number
+          planner_pix: string | null
+          planner_user_id: string | null
           published: boolean
           require_login: boolean
           rsvp_deadline: string | null
@@ -1035,6 +1136,7 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           dress_code?: string | null
+          fees_accepted_at?: string | null
           groom_name: string
           groom_photo_url?: string | null
           hashtag?: string | null
@@ -1067,6 +1169,11 @@ export type Database = {
           plan_notes?: string | null
           plan_paid?: boolean
           plan_started_on?: string | null
+          planner_contact?: string | null
+          planner_name?: string | null
+          planner_percent?: number
+          planner_pix?: string | null
+          planner_user_id?: string | null
           published?: boolean
           require_login?: boolean
           rsvp_deadline?: string | null
@@ -1107,6 +1214,7 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           dress_code?: string | null
+          fees_accepted_at?: string | null
           groom_name?: string
           groom_photo_url?: string | null
           hashtag?: string | null
@@ -1139,6 +1247,11 @@ export type Database = {
           plan_notes?: string | null
           plan_paid?: boolean
           plan_started_on?: string | null
+          planner_contact?: string | null
+          planner_name?: string | null
+          planner_percent?: number
+          planner_pix?: string | null
+          planner_user_id?: string | null
           published?: boolean
           require_login?: boolean
           rsvp_deadline?: string | null
@@ -1169,6 +1282,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_planner_invite: {
+        Args: { _contact: string; _name: string; _pix: string; _token: string }
+        Returns: string
+      }
       commission_percent_for: {
         Args: { _amount_cents: number; _wedding_id: string }
         Returns: number
@@ -1242,6 +1359,7 @@ export type Database = {
           wedding_id: string
         }[]
       }
+      create_planner_invite: { Args: { _wedding_id: string }; Returns: string }
       create_public_gift_order: {
         Args: {
           p_gift_id: string
@@ -1288,6 +1406,15 @@ export type Database = {
       norm_txt: { Args: { t: string }; Returns: string }
       order_confirm_secret_is_set: { Args: never; Returns: boolean }
       owns_wedding: { Args: { _wedding_id: string }; Returns: boolean }
+      planner_invite_info: {
+        Args: { _token: string }
+        Returns: {
+          bride_name: string
+          groom_name: string
+          valid: boolean
+          wedding_date: string
+        }[]
+      }
       post_public_message: {
         Args: { p_body: string; p_name: string; p_wedding_id: string }
         Returns: undefined
@@ -1353,6 +1480,14 @@ export type Database = {
       redeem_invite: {
         Args: { _token: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      register_guest_by_invite: {
+        Args: { p_cpf: string; p_name: string; p_token: string }
+        Returns: string
+      }
+      register_invited_guest: {
+        Args: { p_cpf: string; p_name: string; p_wedding_id: string }
+        Returns: string
       }
       remove_wedding_coowner: {
         Args: { _user_id: string; _wedding_id: string }
@@ -1461,6 +1596,14 @@ export type Database = {
           payment_method: string
           status: string
           total_cents: number
+        }[]
+      }
+      wedding_fee_schedule: {
+        Args: { _wedding_id: string }
+        Returns: {
+          paid_by: string
+          percent: number
+          up_to_cents: number
         }[]
       }
       wedding_payment_public_key: {

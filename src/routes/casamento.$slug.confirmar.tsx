@@ -62,7 +62,7 @@ function RsvpPage() {
 
   const search = useMutation({
     mutationFn: async () => {
-      if (term.trim().length < 3) throw new Error("Digite pelo menos 3 letras do seu nome.");
+      if (term.trim().length < 3) throw new Error("Digite seu CPF ou pelo menos 3 letras do seu nome.");
       const { data, error } = await supabase.rpc("search_wedding_guests", {
         p_wedding_id: wedding!.id,
         p_query: term.trim(),
@@ -164,7 +164,7 @@ function RsvpPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") search.mutate();
                     }}
-                    placeholder="Digite seu nome completo ou parte dele"
+                    placeholder="Digite seu CPF ou seu nome"
                   />
                   <Button onClick={() => search.mutate()} disabled={search.isPending}>
                     <Search className="size-4" /> Buscar

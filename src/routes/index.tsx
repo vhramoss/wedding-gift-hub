@@ -104,6 +104,11 @@ function Home() {
             <Button asChild size="lg">
               <Link to="/criar-conta">Criar o site do casamento</Link>
             </Button>
+            <Button asChild size="lg" variant="outline">
+              <a href="/tutorial-noivos.pdf" target="_blank" rel="noopener noreferrer">
+                Guia passo a passo (PDF)
+              </a>
+            </Button>
             <Button asChild size="lg" variant="secondary">
               <Link to="/auth">Entrar</Link>
             </Button>

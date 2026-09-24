@@ -53,6 +53,7 @@ function SignUpPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [accepted, setAccepted] = useState(false);
+  const [acceptedFees, setAcceptedFees] = useState(false);
 
   const finalSlug = useMemo(
     () => slugify(slug || (bride && groom ? `${bride}-e-${groom}` : "")),
@@ -63,6 +64,10 @@ function SignUpPage() {
     e.preventDefault();
     if (!accepted) {
       toast.error("É preciso aceitar os termos e a política de privacidade.");
+      return;
+    }
+    if (!acceptedFees) {
+      toast.error("É preciso concordar com as taxas da plataforma.");
       return;
     }
     setLoading(true);
@@ -100,10 +105,13 @@ function SignUpPage() {
       if (error) throw error;
 
       const created = data?.[0];
-      if (created && phone.trim()) {
+      if (created) {
         await supabase
           .from("weddings")
-          .update({ notify_whatsapp: phone.trim() })
+          .update({
+            fees_accepted_at: new Date().toISOString(),
+            ...(phone.trim() ? { notify_whatsapp: phone.trim() } : {}),
+          })
           .eq("id", created.wedding_id);
       }
 
@@ -219,6 +227,29 @@ function SignUpPage() {
                   </Link>
                   .
                 </Label>
+              </div>
+
+              <div className="space-y-2 rounded-md border border-accent/50 bg-secondary/40 p-3 text-sm">
+                <p className="font-medium">Taxas da plataforma por presente pago</p>
+                <ul className="list-disc pl-5 text-muted-foreground">
+                  <li>Abaixo de R$ 250,00: 20%</li>
+                  <li>De R$ 250,00 a R$ 1.000,00: 10%</li>
+                  <li>Acima de R$ 1.000,00: 5%</li>
+                </ul>
+                <div className="flex items-start gap-3 pt-1">
+                  <Checkbox
+                    id="fees"
+                    checked={acceptedFees}
+                    onCheckedChange={(v) => setAcceptedFees(v === true)}
+                  />
+                  <Label htmlFor="fees" className="text-sm leading-relaxed font-normal">
+                    Concordo com as taxas cobradas pela plataforma, descritas nos{" "}
+                    <a href="/termos#taxas" className="underline">
+                      termos de taxas
+                    </a>
+                    .
+                  </Label>
+                </div>
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>

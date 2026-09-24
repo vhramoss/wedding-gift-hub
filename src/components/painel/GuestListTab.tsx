@@ -22,6 +22,7 @@ type Guest = {
   name: string;
   group_label: string | null;
   phone: string | null;
+  cpf: string | null;
   max_companions: number;
   attending: boolean | null;
   companions: number;
@@ -40,7 +41,7 @@ function waNumber(phone: string) {
   return digits.startsWith("55") ? digits : `55${digits}`;
 }
 
-/** Lê "Nome; acompanhantes; grupo; telefone" (ponto e vírgula ou vírgula). */
+/** Lê "Nome; acompanhantes; grupo; telefone; CPF" (ponto e vírgula ou vírgula). */
 function parseList(raw: string, weddingId: string) {
   const rows: {
     wedding_id: string;
@@ -48,6 +49,7 @@ function parseList(raw: string, weddingId: string) {
     max_companions: number;
     group_label: string | null;
     phone: string | null;
+    cpf: string | null;
   }[] = [];
   for (const line of raw.split(/\r?\n/)) {
     const clean = line.trim();
@@ -61,6 +63,7 @@ function parseList(raw: string, weddingId: string) {
       max_companions: Math.max(0, Math.min(Number(parts[1] ?? 0) || 0, 20)),
       group_label: parts[2] || null,
       phone: parts[3] || null,
+      cpf: parts[4] ? parts[4].replace(/\D/g, "") || null : null,
     });
   }
   return rows;
@@ -78,7 +81,7 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
       const { data, error } = await supabase
         .from("wedding_guests")
         .select(
-          "id, name, group_label, phone, max_companions, attending, companions, attending_ceremony, attending_party, dietary_notes, message, responded_at, reminder_sent_at",
+          "id, name, group_label, phone, cpf, max_companions, attending, companions, attending_ceremony, attending_party, dietary_notes, message, responded_at, reminder_sent_at",
         )
         .eq("wedding_id", weddingId!)
         .order("name");
@@ -255,10 +258,10 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
               rows={6}
               value={raw}
               onChange={(e) => setRaw(e.target.value)}
-              placeholder={"Maria Silva; 1; Família da noiva\nJoão Souza; 0; Amigos\nAna Lima"}
+              placeholder={"Maria Silva; 1; Família da noiva; 19999999999; 123.456.789-00\nJoão Souza; 0; Amigos\nAna Lima"}
             />
             <p className="text-xs text-muted-foreground">
-              Formato: nome; quantos acompanhantes pode levar; grupo; telefone. Só o nome já basta.
+              Formato: nome; acompanhantes; grupo; telefone; CPF. Dá para colar direto de uma planilha. A confirmação de presença por CPF só encontra quem tiver o CPF nesta lista.
             </p>
           </div>
 
@@ -271,9 +274,10 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
               onClick={() =>
                 downloadCsv(
                   "lista-de-convidados.csv",
-                  ["Convidado", "Grupo", "Resposta", "Acompanhantes", "Cerimônia", "Festa", "Restrição", "Recado"],
+                  ["Convidado", "CPF", "Grupo", "Resposta", "Acompanhantes", "Cerimônia", "Festa", "Restrição", "Recado"],
                   guests.map((g) => [
                     g.name,
+                    g.cpf ?? "",
                     g.group_label ?? "",
                     g.attending === null ? "Sem resposta" : g.attending ? "Vai" : "Não vai",
                     g.companions,

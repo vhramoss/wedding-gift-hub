@@ -18,6 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PayoutsTab } from "@/components/admin/PayoutsTab";
 import { WeddingPlanCard } from "@/components/admin/WeddingPlanCard";
 import { FeeTiersCard } from "@/components/admin/FeeTiersCard";
+import { PlannerCard } from "@/components/admin/PlannerCard";
+import { PlannerInviteCard } from "@/components/PlannerInviteCard";
 import { useSession } from "@/hooks/useSession";
 import { useMyRoles, type AppRole } from "@/hooks/useRoles";
 import { formatBRL } from "@/lib/br";
@@ -296,6 +298,8 @@ function SuperAdminPage() {
                     <CardContent className="space-y-4">
                        <WeddingPlanCard wedding={w} />
                        <FeeTiersCard weddingId={w.id} />
+                       <PlannerCard weddingId={w.id} />
+                       <PlannerInviteCard weddingId={w.id} />
 
                        <div className="grid gap-4 sm:grid-cols-2">
                          <div className="space-y-2">
