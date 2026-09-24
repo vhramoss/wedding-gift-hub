@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, MapPin, ShoppingBag } from "lucide-react";
 
@@ -57,18 +57,21 @@ function CartNavLink({ slug }: { slug: string }) {
 
 function WeddingLayout() {
   const { slug } = Route.useParams();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const isHomePage = pathname.replace(/\/$/, "") === `/casamento/${slug}`;
   const { data: wedding, isLoading } = useWedding(slug);
   const { user, loading: loadingSession } = useSession();
   const [heroIndex, setHeroIndex] = useState(0);
 
   const coverPhotosQuery = useQuery({
     queryKey: ["wedding-cover-photos", wedding?.id],
-    enabled: Boolean(wedding?.id),
+    enabled: isHomePage && Boolean(wedding?.id),
     queryFn: async () => {
+      if (!wedding?.id) return [];
       const { data, error } = await supabase
         .from("wedding_photos")
         .select("id, url")
-        .eq("wedding_id", wedding!.id)
+        .eq("wedding_id", wedding.id)
         .eq("show_in_cover", true)
         .order("sort_order", { ascending: true });
       if (error) throw error;
@@ -203,66 +206,68 @@ function WeddingLayout() {
         </div>
       </nav>
 
-      <section
-        className={`relative flex items-center justify-center overflow-hidden border-b border-border/70 ${heightClass}`}
-        style={{ backgroundImage: "var(--hero-gradient)" }}
-      >
-        {covers.map((src, i) => (
-          <img
-            key={src}
-            src={src}
-            alt={`${wedding.bride_name} e ${wedding.groom_name}`}
-            className={`absolute inset-0 size-full ${fitClass} transition-opacity duration-1000`}
-            style={{ opacity: i === heroIndex % covers.length ? opacity : 0, objectPosition }}
-          />
-        ))}
-        <div className="relative mx-auto max-w-5xl px-4 py-12 text-center sm:py-20" style={heroTextStyle}>
-          {wedding.monogram ? (
-            <div className="mx-auto mb-6 w-fit border px-6 py-4 font-display text-2xl tracking-[0.35em] sm:px-10 sm:py-6 sm:text-3xl"
-              style={{ borderColor: wedding.hero_text_color ?? "currentColor" }}
-            >
-              {wedding.monogram}
-            </div>
-          ) : null}
-          <h1 className="text-balance-title font-display text-4xl font-semibold sm:text-6xl md:text-7xl">
-            {wedding.bride_name}{" "}
-            <span className={wedding.hero_text_color ? "" : "text-accent"}>&</span>{" "}
-            {wedding.groom_name}
-          </h1>
-          <div className="divider-gold mx-auto my-5 w-28 sm:my-6 sm:w-40" />
-          <div
-            className={`flex flex-col items-center gap-3 text-xs uppercase tracking-[0.16em] sm:flex-row sm:flex-wrap sm:justify-center sm:gap-6 sm:text-sm sm:tracking-[0.2em] ${
-              wedding.hero_text_color ? "opacity-90" : "text-muted-foreground"
-            }`}
-          >
-            {date ? (
-              <span className="flex items-center gap-2">
-                <CalendarDays className="size-4" /> {date}
-                {wedding.ceremony_time ? ` · ${wedding.ceremony_time}` : ""}
-              </span>
+      {isHomePage ? (
+        <section
+          className={`relative flex items-center justify-center overflow-hidden border-b border-border/70 ${heightClass}`}
+          style={{ backgroundImage: "var(--hero-gradient)" }}
+        >
+          {covers.map((src, i) => (
+            <img
+              key={src}
+              src={src}
+              alt={`${wedding.bride_name} e ${wedding.groom_name}`}
+              className={`absolute inset-0 size-full ${fitClass} transition-opacity duration-1000`}
+              style={{ opacity: i === heroIndex % covers.length ? opacity : 0, objectPosition }}
+            />
+          ))}
+          <div className="relative mx-auto max-w-5xl px-4 py-12 text-center sm:py-20" style={heroTextStyle}>
+            {wedding.monogram ? (
+              <div className="mx-auto mb-6 w-fit border px-6 py-4 font-display text-2xl tracking-[0.35em] sm:px-10 sm:py-6 sm:text-3xl"
+                style={{ borderColor: wedding.hero_text_color ?? "currentColor" }}
+              >
+                {wedding.monogram}
+              </div>
             ) : null}
-            {wedding.party_venue || wedding.venue ? (
-              <span className="flex items-center gap-2">
-                <MapPin className="size-4" /> {wedding.party_venue ?? wedding.venue}
-              </span>
-            ) : null}
-          </div>
-          {wedding.party_address ? (
-            <p className={`mt-3 text-sm ${wedding.hero_text_color ? "opacity-90" : "text-muted-foreground"}`}>
-              {wedding.party_address}
-            </p>
-          ) : null}
-          {wedding.tagline ? (
-            <p
-              className={`mx-auto mt-6 max-w-2xl whitespace-pre-line text-lg italic leading-relaxed ${
+            <h1 className="text-balance-title font-display text-4xl font-semibold sm:text-6xl md:text-7xl">
+              {wedding.bride_name}{" "}
+              <span className={wedding.hero_text_color ? "" : "text-accent"}>&</span>{" "}
+              {wedding.groom_name}
+            </h1>
+            <div className="divider-gold mx-auto my-5 w-28 sm:my-6 sm:w-40" />
+            <div
+              className={`flex flex-col items-center gap-3 text-xs uppercase tracking-[0.16em] sm:flex-row sm:flex-wrap sm:justify-center sm:gap-6 sm:text-sm sm:tracking-[0.2em] ${
                 wedding.hero_text_color ? "opacity-90" : "text-muted-foreground"
               }`}
             >
-              {wedding.tagline}
-            </p>
-          ) : null}
-        </div>
-      </section>
+              {date ? (
+                <span className="flex items-center gap-2">
+                  <CalendarDays className="size-4" /> {date}
+                  {wedding.ceremony_time ? ` · ${wedding.ceremony_time}` : ""}
+                </span>
+              ) : null}
+              {wedding.party_venue || wedding.venue ? (
+                <span className="flex items-center gap-2">
+                  <MapPin className="size-4" /> {wedding.party_venue ?? wedding.venue}
+                </span>
+              ) : null}
+            </div>
+            {wedding.party_address ? (
+              <p className={`mt-3 text-sm ${wedding.hero_text_color ? "opacity-90" : "text-muted-foreground"}`}>
+                {wedding.party_address}
+              </p>
+            ) : null}
+            {wedding.tagline ? (
+              <p
+                className={`mx-auto mt-6 max-w-2xl whitespace-pre-line text-lg italic leading-relaxed ${
+                  wedding.hero_text_color ? "opacity-90" : "text-muted-foreground"
+                }`}
+              >
+                {wedding.tagline}
+              </p>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <Outlet />
 

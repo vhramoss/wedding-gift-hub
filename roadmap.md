@@ -30,3 +30,4 @@
 - [x] Convite de cerimonialista (gerado pelos noivos ou super admin): ele se cadastra com Pix e fica ligado ao casamento
 - [x] Cadastro: caixa de taxas agora é implícita (só link "termos de taxas") e deixa claro que não são descontadas dos presentes dos noivos
 - [x] PDF tutorial: removida a seção de taxas e a menção de taxa no item "Recebimento"
+- [x] Navegação do site: capa aparece só no início; páginas internas abrem diretamente no conteúdo escolhido
