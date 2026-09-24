@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Music, Pause, Play, X } from "lucide-react";
 
 type Props = {
@@ -16,12 +16,12 @@ function parseSource(raw: string): Source {
   const url = raw.trim();
   const yt =
     url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/i);
-  if (yt) return { kind: "youtube", id: yt[1]! };
+  if (yt?.[1]) return { kind: "youtube", id: yt[1] };
   const sp = url.match(/open\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:embed\/)?(track|album|playlist|episode)\/([A-Za-z0-9]+)/i);
-  if (sp) return { kind: "spotify", type: sp[1]!.toLowerCase(), id: sp[2]! };
+  if (sp?.[1] && sp[2]) return { kind: "spotify", type: sp[1].toLowerCase(), id: sp[2] };
   // Google Drive: converte link de compartilhamento em download direto
   const gd = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:.*&)?id=)([\w-]+)/i);
-  if (gd) return { kind: "audio", src: `https://drive.google.com/uc?export=download&id=${gd[1]!}` };
+  if (gd?.[1]) return { kind: "audio", src: `https://drive.google.com/uc?export=download&id=${gd[1]}` };
   // Dropbox: força arquivo direto
   if (/dropbox\.com/i.test(url)) {
     return { kind: "audio", src: url.replace(/[?&]dl=0/, "").replace(/(\?|$)/, (m) => (m === "?" ? "?raw=1&" : "?raw=1")) };
@@ -33,37 +33,61 @@ function parseSource(raw: string): Source {
 export function SiteMusic({ url, title, autoplay }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ytRef = useRef<HTMLIFrameElement | null>(null);
+  const ytReadyRef = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [spotifyOpen, setSpotifyOpen] = useState(false);
-  const source = url ? parseSource(url) : null;
+  const source = useMemo(() => (url ? parseSource(url) : null), [url]);
 
-  const ytCmd = (func: "playVideo" | "pauseVideo") =>
+  const ytCmd = useCallback((func: "playVideo" | "pauseVideo") => {
     ytRef.current?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args: [] }), "*");
+  }, []);
+
+  const tryPlay = useCallback(() => {
+    if (!source || source.kind === "spotify") return;
+    if (source.kind === "youtube") {
+      if (!ytReadyRef.current) return;
+      ytCmd("playVideo");
+      return;
+    }
+    const audio = audioRef.current;
+    if (!audio) return;
+    void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+  }, [source, ytCmd]);
 
   useEffect(() => {
-    if (!source || !autoplay) return;
-    if (source.kind === "spotify") return;
-
-    const tryPlay = () => {
-      if (source.kind === "youtube") {
-        ytCmd("playVideo");
-        setPlaying(true);
-        return;
+    if (!source || source.kind !== "youtube") return;
+    const receiveYoutubeEvent = (event: MessageEvent) => {
+      if (event.source !== ytRef.current?.contentWindow) return;
+      try {
+        const payload = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        if (payload?.event === "onReady") {
+          ytReadyRef.current = true;
+          if (autoplay) tryPlay();
+        }
+        const state = payload?.event === "onStateChange" ? payload.info : payload?.info?.playerState;
+        if (state === 1) setPlaying(true);
+        if (state === 0 || state === 2) setPlaying(false);
+      } catch {
+        // Ignora mensagens que não pertencem à API do YouTube.
       }
-      const audio = audioRef.current;
-      if (!audio) return;
-      void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
     };
-    const t = setTimeout(tryPlay, 800);
-    // Navegadores só liberam o som após um toque na tela.
-    const once = () => tryPlay();
-    window.addEventListener("pointerdown", once, { once: true });
+    window.addEventListener("message", receiveYoutubeEvent);
+    return () => window.removeEventListener("message", receiveYoutubeEvent);
+  }, [autoplay, source, tryPlay]);
+
+  useEffect(() => {
+    if (!source || !autoplay || source.kind === "spotify") return;
+
+    const initialAttempt = window.setTimeout(tryPlay, 400);
+    const resumeAfterInteraction = () => tryPlay();
+    window.addEventListener("pointerdown", resumeAfterInteraction, true);
+    window.addEventListener("keydown", resumeAfterInteraction, true);
     return () => {
-      clearTimeout(t);
-      window.removeEventListener("pointerdown", once);
+      window.clearTimeout(initialAttempt);
+      window.removeEventListener("pointerdown", resumeAfterInteraction, true);
+      window.removeEventListener("keydown", resumeAfterInteraction, true);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, autoplay]);
+  }, [autoplay, source, tryPlay]);
 
   if (!source) return null;
 
@@ -95,8 +119,12 @@ export function SiteMusic({ url, title, autoplay }: Props) {
         <iframe
           ref={ytRef}
           title="Música do casal"
-          src={`https://www.youtube.com/embed/${source.id}?enablejsapi=1&loop=1&playlist=${source.id}&controls=0&playsinline=1`}
+          src={`https://www.youtube.com/embed/${source.id}?enablejsapi=1&autoplay=${autoplay ? "1" : "0"}&loop=1&playlist=${source.id}&controls=0&playsinline=1`}
           allow="autoplay; encrypted-media"
+          onLoad={() => {
+            ytReadyRef.current = true;
+            if (autoplay) window.setTimeout(tryPlay, 150);
+          }}
           className="pointer-events-none fixed -left-[9999px] top-0 h-px w-px opacity-0"
         />
       )}
