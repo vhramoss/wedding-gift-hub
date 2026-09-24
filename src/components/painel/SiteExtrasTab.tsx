@@ -439,13 +439,17 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="music-url">Link da música (MP3)</Label>
+            <Label htmlFor="music-url">Link da música</Label>
             <Input
               id="music-url"
               value={draft.music_url}
-              placeholder="https://.../nossa-musica.mp3"
+              placeholder="Link do YouTube, Spotify ou arquivo MP3"
               onChange={(e) => setDraft({ ...draft, music_url: e.target.value })}
             />
+            <p className="text-xs text-muted-foreground">
+              YouTube é o melhor: toca sozinho ao abrir o site. No Spotify, o convidado toca no player
+              (sem conta no Spotify, só 30 segundos).
+            </p>
           </div>
 
           <div className="space-y-2">

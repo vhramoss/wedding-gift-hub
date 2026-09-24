@@ -230,12 +230,18 @@ function SignUpPage() {
               </div>
 
               <div className="space-y-2 rounded-md border border-accent/50 bg-secondary/40 p-3 text-sm">
-                <p className="font-medium">Taxas da plataforma por presente pago</p>
-                <ul className="list-disc pl-5 text-muted-foreground">
-                  <li>Abaixo de R$ 250,00: 20%</li>
-                  <li>De R$ 250,00 a R$ 1.000,00: 10%</li>
-                  <li>Acima de R$ 1.000,00: 5%</li>
-                </ul>
+                <p className="font-medium">Taxas da plataforma</p>
+                <p className="leading-relaxed text-muted-foreground">
+                  As taxas de serviço são cobradas à parte e{" "}
+                  <strong className="text-foreground">
+                    não são descontadas dos presentes que vocês recebem
+                  </strong>
+                  . Os detalhes estão nos{" "}
+                  <a href="/termos#taxas" className="underline">
+                    termos de taxas
+                  </a>
+                  .
+                </p>
                 <div className="flex items-start gap-3 pt-1">
                   <Checkbox
                     id="fees"

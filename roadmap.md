@@ -28,3 +28,5 @@
 - [x] Lista fechada dos noivos com CPF (importar/exportar planilha); busca por CPF só na lista fechada
 - [x] Cadastro pelo QR vai para lista separada "perfis criados" (não entra na lista fechada)
 - [x] Convite de cerimonialista (gerado pelos noivos ou super admin): ele se cadastra com Pix e fica ligado ao casamento
+- [x] Cadastro: caixa de taxas agora é implícita (só link "termos de taxas") e deixa claro que não são descontadas dos presentes dos noivos
+- [x] PDF tutorial: removida a seção de taxas e a menção de taxa no item "Recebimento"
