@@ -356,7 +356,7 @@ function CouplePanel() {
         ) : null}
 
         <Tabs defaultValue="content" className="mt-8">
-          <TabsList>
+          <TabsList className="h-auto flex-wrap justify-start gap-1 overflow-visible sm:h-9 sm:flex-nowrap sm:overflow-x-auto">
             <TabsTrigger value="content">Nosso site</TabsTrigger>
             <TabsTrigger value="photos">Fotos</TabsTrigger>
             <TabsTrigger value="extras">Capa e música</TabsTrigger>

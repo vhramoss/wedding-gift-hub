@@ -38,3 +38,5 @@
 - [x] Criar seis imagens nativas variadas para casamento
 - [x] Adicionar escolha visual com prévia imediata na área “Capa e música”
 - [x] Salvar o fundo escolhido junto com os demais ajustes da capa
+
+- [x] 24/09 Capa: enviar foto da galeria/câmera; revisão completa no celular (menu do site do casamento, abas do painel e super admin)

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, Image as ImageIcon, Music, RotateCcw, Save } from "lucide-react";
+import { Check, Image as ImageIcon, Music, RotateCcw, Save, Upload } from "lucide-react";
+import { uploadWeddingImage } from "@/lib/upload";
 
 import { supabase } from "@/integrations/supabase/client";
 import capaJardimDourado from "@/assets/capa-jardim-dourado.jpg";
@@ -73,6 +74,7 @@ const PREVIEW_HEIGHT: Record<string, string> = {
 export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<Draft>(EMPTY);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   const weddingQuery = useQuery({
     queryKey: ["panel", "extras", weddingId],
@@ -357,17 +359,47 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
           </div>
 
           <div className="space-y-2 sm:col-span-3">
-            <Label htmlFor="cover-url">Usar uma imagem sua (URL)</Label>
+            <Label htmlFor="cover-file">Usar uma foto de vocês</Label>
+            <label
+              htmlFor="cover-file"
+              className="flex min-h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-dashed border-primary/40 bg-muted/40 px-4 py-3 text-center text-sm font-medium hover:bg-muted"
+            >
+              <Upload className="size-5 shrink-0" />
+              {uploadingCover ? "Enviando foto..." : "Escolher da galeria ou tirar foto"}
+            </label>
+            <input
+              id="cover-file"
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={uploadingCover}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                setUploadingCover(true);
+                try {
+                  const { url } = await uploadWeddingImage(file, weddingId);
+                  setDraft((d) => ({ ...d, cover_image_url: url }));
+                  toast.success("Foto carregada! Clique em salvar para aplicar.");
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : "Não foi possível enviar a foto.");
+                } finally {
+                  setUploadingCover(false);
+                }
+              }}
+            />
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input
                 id="cover-url"
                 value={draft.cover_image_url}
-                placeholder="Cole o link de uma foto de vocês (https://...)"
+                placeholder="Ou cole o link de uma foto (https://...)"
                 onChange={(e) => setDraft({ ...draft, cover_image_url: e.target.value })}
               />
               <Button
                 type="button"
                 variant="outline"
+                className="w-full sm:w-auto"
                 onClick={() => setDraft({ ...draft, cover_image_url: "" })}
               >
                 <RotateCcw className="size-4" />
@@ -375,10 +407,11 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Cola o link de uma foto sua para usar na capa. Também dá pra subir fotos pela aba
+              Escolha uma foto do celular ou computador. Também dá pra subir várias pela aba
               “Fotos” e marcar “Mostrar na capa do site” — elas trocam sozinhas.
             </p>
           </div>
+
 
           <div className="space-y-2 sm:col-span-3">
             <Label htmlFor="hero-title">Título da capa</Label>

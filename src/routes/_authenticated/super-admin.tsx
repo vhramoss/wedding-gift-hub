@@ -250,7 +250,7 @@ function SuperAdminPage() {
         </div>
 
         <Tabs defaultValue="weddings">
-          <TabsList>
+          <TabsList className="h-auto flex-wrap justify-start gap-1 overflow-visible sm:h-9 sm:flex-nowrap sm:overflow-x-auto">
             <TabsTrigger value="weddings">Casamentos</TabsTrigger>
             <TabsTrigger value="commissions">Comissões</TabsTrigger>
             <TabsTrigger value="accounts">Contas por casamento</TabsTrigger>

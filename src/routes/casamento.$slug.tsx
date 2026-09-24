@@ -164,7 +164,7 @@ function WeddingLayout() {
             {initials}
           </Link>
 
-          <div className="no-scrollbar flex flex-1 items-center justify-end gap-1 overflow-x-auto">
+          <div className="no-scrollbar flex min-w-0 flex-1 items-center justify-start gap-1 overflow-x-auto sm:justify-end">
             <Link
               to="/casamento/$slug"
               params={{ slug }}
