@@ -147,6 +147,7 @@ function WeddingLayout() {
   const heroTextStyle = wedding.hero_text_color
     ? ({ color: wedding.hero_text_color } as const)
     : undefined;
+  const heroTitle = wedding.hero_title?.trim() || `${wedding.bride_name} & ${wedding.groom_name}`;
 
   return (
     <CartProvider slug={slug}>
@@ -228,10 +229,8 @@ function WeddingLayout() {
                 {wedding.monogram}
               </div>
             ) : null}
-            <h1 className="text-balance-title font-display text-4xl font-semibold sm:text-6xl md:text-7xl">
-              {wedding.bride_name}{" "}
-              <span className={wedding.hero_text_color ? "" : "text-accent"}>&</span>{" "}
-              {wedding.groom_name}
+            <h1 className="text-balance-title whitespace-pre-line font-display text-4xl font-semibold sm:text-6xl md:text-7xl">
+              {heroTitle}
             </h1>
             <div className="divider-gold mx-auto my-5 w-28 sm:my-6 sm:w-40" />
             <div

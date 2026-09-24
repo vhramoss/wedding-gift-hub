@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Image as ImageIcon, Music, Save } from "lucide-react";
+import { Check, Image as ImageIcon, Music, RotateCcw, Save } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import capaJardimDourado from "@/assets/capa-jardim-dourado.jpg";
+import capaCapelaClassica from "@/assets/capa-capela-classica.jpg";
+import capaPraiaPorDoSol from "@/assets/capa-praia-por-do-sol.jpg";
+import capaNoiteElegante from "@/assets/capa-noite-elegante.jpg";
+import capaCampoRomantico from "@/assets/capa-campo-romantico.jpg";
+import capaMinimalista from "@/assets/capa-minimalista.jpg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +24,8 @@ import {
 } from "@/components/ui/select";
 
 type Draft = {
+  cover_image_url: string;
+  hero_title: string;
   hero_opacity: number;
   hero_height: string;
   hero_fit: string;
@@ -32,6 +40,8 @@ type Draft = {
 };
 
 const EMPTY: Draft = {
+  cover_image_url: "",
+  hero_title: "",
   hero_opacity: 30,
   hero_height: "grande",
   hero_fit: "cobrir",
@@ -44,6 +54,15 @@ const EMPTY: Draft = {
   music_url: "",
   music_title: "",
 };
+
+const COVER_PRESETS = [
+  { name: "Jardim dourado", src: capaJardimDourado },
+  { name: "Capela clássica", src: capaCapelaClassica },
+  { name: "Praia ao pôr do sol", src: capaPraiaPorDoSol },
+  { name: "Noite elegante", src: capaNoiteElegante },
+  { name: "Campo romântico", src: capaCampoRomantico },
+  { name: "Minimalista", src: capaMinimalista },
+] as const;
 
 const PREVIEW_HEIGHT: Record<string, string> = {
   normal: "h-44",
@@ -62,7 +81,7 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
       const { data, error } = await supabase
         .from("weddings")
         .select(
-          "id, bride_name, groom_name, published, require_login, cover_image_url, hero_opacity, hero_height, hero_fit, hero_text_color, hero_pos_x, hero_pos_y, hero_rotate_seconds, music_enabled, music_autoplay, music_url, music_title",
+          "id, bride_name, groom_name, published, require_login, cover_image_url, hero_title, hero_opacity, hero_height, hero_fit, hero_text_color, hero_pos_x, hero_pos_y, hero_rotate_seconds, music_enabled, music_autoplay, music_url, music_title",
         )
         .eq("id", weddingId!)
         .maybeSingle();
@@ -138,6 +157,8 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
     const w = weddingQuery.data;
     if (!w) return;
     setDraft({
+      cover_image_url: w.cover_image_url ?? "",
+      hero_title: w.hero_title ?? "",
       hero_opacity: w.hero_opacity ?? 30,
       hero_height: w.hero_height ?? "grande",
       hero_fit: w.hero_fit ?? "cobrir",
@@ -157,6 +178,8 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
       const { error } = await supabase
         .from("weddings")
         .update({
+          cover_image_url: draft.cover_image_url.trim() || null,
+          hero_title: draft.hero_title.trim() || null,
           hero_opacity: Math.min(100, Math.max(0, Number(draft.hero_opacity) || 0)),
           hero_height: draft.hero_height,
           hero_fit: draft.hero_fit,
@@ -184,10 +207,12 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
 
   const wedding = weddingQuery.data;
   const previewPhotos = [
-    ...(wedding?.cover_image_url ? [wedding.cover_image_url] : []),
+    ...(draft.cover_image_url ? [draft.cover_image_url] : []),
     ...(photosQuery.data ?? []).map((p) => p.url),
   ];
   const previewSrc = previewPhotos[0] ?? null;
+  const defaultHeroTitle = `${wedding?.bride_name ?? "Noiva"} & ${wedding?.groom_name ?? "Noivo"}`;
+  const previewHeroTitle = draft.hero_title.trim() || defaultHeroTitle;
 
   return (
     <div className="space-y-6">
@@ -264,9 +289,7 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
               className="relative px-4 text-center"
               style={draft.hero_text_color ? { color: draft.hero_text_color } : undefined}
             >
-              <p className="font-display text-2xl sm:text-3xl">
-                {wedding?.bride_name ?? "Noiva"} & {wedding?.groom_name ?? "Noivo"}
-              </p>
+              <p className="whitespace-pre-line font-display text-2xl sm:text-3xl">{previewHeroTitle}</p>
             </div>
           </div>
         </CardContent>
@@ -283,6 +306,80 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 sm:grid-cols-3">
+          <div className="space-y-3 sm:col-span-3">
+            <div>
+              <Label>Fundos prontos</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Escolham uma imagem e confiram o resultado na prévia. A foto de vocês continua disponível na aba “Fotos”.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+              {COVER_PRESETS.map((preset) => {
+                const selected = draft.cover_image_url === preset.src;
+                return (
+                  <Button
+                    key={preset.name}
+                    type="button"
+                    variant="outline"
+                    aria-pressed={selected}
+                    onClick={() =>
+                      setDraft({
+                        ...draft,
+                        cover_image_url: preset.src,
+                        hero_opacity: preset.name === "Capela clássica" ? 70 : 55,
+                        hero_text_color: preset.name === "Capela clássica" ? "#33443a" : "#ffffff",
+                      })
+                    }
+                    className={`group relative h-auto min-h-0 overflow-hidden p-0 ${
+                      selected ? "border-primary ring-2 ring-primary/30" : "border-border"
+                    }`}
+                  >
+                    <img
+                      src={preset.src}
+                      alt={preset.name}
+                      loading="lazy"
+                      width={1600}
+                      height={1000}
+                      className="aspect-[8/5] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                    />
+                    <span className="absolute inset-x-0 bottom-0 bg-foreground/75 px-2 py-2 text-left text-xs font-medium text-background">
+                      {preset.name}
+                    </span>
+                    {selected ? (
+                      <span className="absolute right-2 top-2 grid size-7 place-items-center rounded-full bg-primary text-primary-foreground">
+                        <Check className="size-4" />
+                      </span>
+                    ) : null}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-2 sm:col-span-3">
+            <Label htmlFor="hero-title">Título da capa</Label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                id="hero-title"
+                value={draft.hero_title}
+                placeholder={defaultHeroTitle}
+                maxLength={100}
+                onChange={(e) => setDraft({ ...draft, hero_title: e.target.value })}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDraft({ ...draft, hero_title: "" })}
+              >
+                <RotateCcw className="size-4" />
+                Usar nomes do cadastro
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Mudem como os nomes aparecem somente na capa, sem alterar o cadastro do casamento.
+            </p>
+          </div>
+
           <div className="space-y-2 sm:col-span-3">
             <Label htmlFor="hero-opacity">
               Quanto a foto aparece: {draft.hero_opacity}%

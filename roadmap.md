@@ -32,3 +32,9 @@
 - [x] PDF tutorial: removida a seção de taxas e a menção de taxa no item "Recebimento"
 - [x] Navegação do site: capa aparece só no início; páginas internas abrem diretamente no conteúdo escolhido
 - [x] Música: sincronizar o início automático do YouTube e repetir após a primeira interação permitida pelo navegador
+- [x] Capa: permitir que os noivos personalizem o título sem alterar os nomes do cadastro
+
+## Pedido 24/09 — fundos prontos para a capa
+- [x] Criar seis imagens nativas variadas para casamento
+- [x] Adicionar escolha visual com prévia imediata na área “Capa e música”
+- [x] Salvar o fundo escolhido junto com os demais ajustes da capa

@@ -1069,6 +1069,7 @@ export type Database = {
           hero_pos_y: number
           hero_rotate_seconds: number
           hero_text_color: string | null
+          hero_title: string | null
           id: string
           messages_auto_approve: boolean
           monogram: string | null
@@ -1147,6 +1148,7 @@ export type Database = {
           hero_pos_y?: number
           hero_rotate_seconds?: number
           hero_text_color?: string | null
+          hero_title?: string | null
           id?: string
           messages_auto_approve?: boolean
           monogram?: string | null
@@ -1225,6 +1227,7 @@ export type Database = {
           hero_pos_y?: number
           hero_rotate_seconds?: number
           hero_text_color?: string | null
+          hero_title?: string | null
           id?: string
           messages_auto_approve?: boolean
           monogram?: string | null
