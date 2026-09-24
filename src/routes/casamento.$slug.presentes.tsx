@@ -171,7 +171,7 @@ function GiftsPage() {
                   {gift.description ? (
                     <p className="text-sm text-muted-foreground">{gift.description}</p>
                   ) : null}
-                  <p className="mt-1 font-display text-3xl text-primary">
+                  <p className="mt-1 font-sans font-semibold text-3xl text-primary">
                     {formatBRL(displayedPrice)}
                   </p>
                   {sharesTotal > 1 ? (

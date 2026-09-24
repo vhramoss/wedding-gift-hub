@@ -40,3 +40,13 @@
 - [x] Salvar o fundo escolhido junto com os demais ajustes da capa
 
 - [x] 24/09 Capa: enviar foto da galeria/câmera; revisão completa no celular (menu do site do casamento, abas do painel e super admin)
+
+## Pedido 24/09 — pedidos, prévia e tipografia
+- [x] Pedidos: impedir valores e datas inválidos e reorganizar os dados para celular
+- [x] Aparência: prévia fiel à capa pública
+- [x] Tipografia: fonte decorativa somente em títulos e capa; textos em fonte legível
+- [x] Verificar no celular a aba Pedidos, a prévia e o site público
+
+## Pedido 24/09 — conta dos noivos
+- [x] Permitir alterar os nomes cadastrados do casal e o nome pessoal da conta na área dos noivos
+- [x] Verificar a alteração e a visualização no celular

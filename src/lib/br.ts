@@ -1,9 +1,17 @@
-export function formatBRL(cents: number): string {
-  const reais = Math.abs(cents / 100);
-  const sign = cents < 0 ? "-" : "";
+export function formatBRL(cents: number | null | undefined): string {
+  const safeCents = Number(cents);
+  if (!Number.isFinite(safeCents)) return "R$ 0,00";
+  const reais = Math.abs(safeCents / 100);
+  const sign = safeCents < 0 ? "-" : "";
   const parts = reais.toFixed(2).split(".");
   const intPart = Number(parts[0]).toLocaleString("pt-BR");
   return `${sign}R$ ${intPart},${parts[1]}`;
+}
+
+export function formatDateTimeBR(value: string | null | undefined): string {
+  if (!value) return "Data não informada";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Data não informada" : date.toLocaleString("pt-BR");
 }
 
 export function onlyDigits(value: string): string {

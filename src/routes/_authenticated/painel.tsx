@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Download, ExternalLink, Plus, Trash2 } from "lucide-react";
+import { Download, ExternalLink, Plus, Save, Trash2 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -35,7 +35,7 @@ import { downloadCsv } from "@/lib/csv";
 import { useSession } from "@/hooks/useSession";
 import { useMyRoles } from "@/hooks/useRoles";
 import { useMyWedding } from "@/hooks/useMyWedding";
-import { formatBRL, PAYMENT_LABELS, type PaymentMethod } from "@/lib/br";
+import { formatBRL, formatDateTimeBR, PAYMENT_LABELS, type PaymentMethod } from "@/lib/br";
 
 export const Route = createFileRoute("/_authenticated/painel")({
   validateSearch: (search: Record<string, unknown>): { w?: string } =>
@@ -97,6 +97,46 @@ function CouplePanel() {
   const wedding = (asAdmin ? overrideQuery.data : myWeddingQuery.data) ?? null;
   const weddingLoading = asAdmin ? overrideQuery.isLoading : myWeddingQuery.isLoading;
   const weddingId = wedding?.id ?? null;
+
+  const profileQuery = useQuery({
+    queryKey: ["profile", user?.id],
+    enabled: Boolean(user?.id) && !asAdmin,
+    queryFn: async () => {
+      if (!user?.id) throw new Error("Conta não encontrada.");
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const updateProfile = useMutation({
+    mutationFn: async (form: FormData) => {
+      if (!user?.id) throw new Error("Conta não encontrada.");
+      const fullName = String(form.get("fullName") ?? "").trim();
+      if (fullName.length < 2) throw new Error("Informe seu nome completo.");
+      if (fullName.length > 120) throw new Error("O nome deve ter no máximo 120 caracteres.");
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({ full_name: fullName })
+        .eq("id", user.id);
+      if (error) throw error;
+
+      // Mantém também os dados básicos da conta sincronizados com o perfil exibido no painel.
+      await supabase.auth.updateUser({ data: { full_name: fullName } });
+      return fullName;
+    },
+    onSuccess: (fullName) => {
+      queryClient.setQueryData(["profile", user?.id], { full_name: fullName });
+      queryClient.invalidateQueries({ queryKey: ["panel", "coowners", weddingId] });
+      toast.success("Nome de cadastro atualizado!");
+    },
+    onError: (e: Error) => toast.error("Não foi possível salvar", { description: e.message }),
+  });
 
 
   const giftsQuery = useQuery({
@@ -306,7 +346,7 @@ function CouplePanel() {
 
   const totalPaid = (ordersQuery.data ?? [])
     .filter((o) => o.status === "paid")
-    .reduce((acc, o) => acc + o.amount_cents, 0);
+    .reduce((acc, o) => acc + (Number.isFinite(Number(o.amount_cents)) ? Number(o.amount_cents) : 0), 0);
 
   return (
     <div className="min-h-screen">
@@ -372,6 +412,7 @@ function CouplePanel() {
             <TabsTrigger value="payments">Recebimento</TabsTrigger>
             <TabsTrigger value="fees">Taxas</TabsTrigger>
             <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
+            {!asAdmin ? <TabsTrigger value="account">Minha conta</TabsTrigger> : null}
           </TabsList>
 
           <TabsContent value="content" className="mt-6">
@@ -578,25 +619,33 @@ function CouplePanel() {
               </CardContent>
             </Card>
 
-            {(ordersQuery.data ?? []).map((order) => (
-              <Card key={order.id}>
-                <CardContent className="flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg">{order.gifts?.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {order.guest_name || "Convidado"} ·{" "}
-                      {PAYMENT_LABELS[order.payment_method as PaymentMethod]}
-                      {order.installments > 1 ? ` em ${order.installments}x` : ""} ·{" "}
-                      {new Date(order.created_at).toLocaleString("pt-BR")}
+            {(ordersQuery.data ?? []).map((order) => {
+              const paymentLabel = PAYMENT_LABELS[order.payment_method as PaymentMethod] ?? "Forma não informada";
+              const installments = Number(order.installments);
+              const amount = Number.isFinite(Number(order.total_cents))
+                ? Number(order.total_cents)
+                : Number(order.amount_cents);
+              return (
+              <Card key={order.id} className="shadow-card">
+                <CardContent className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <div className="min-w-0">
+                    <h3 className="break-words text-lg font-medium">{order.gifts?.name || "Presente"}</h3>
+                    <p className="mt-1 break-words text-sm text-muted-foreground">
+                      {order.guest_name?.trim() || "Convidado não identificado"}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {paymentLabel}
+                      {Number.isFinite(installments) && installments > 1 ? ` em ${installments}x` : ""}
+                      {" · "}{formatDateTimeBR(order.created_at)}
                     </p>
                     {order.message ? (
                       <p className="mt-1 text-sm italic text-muted-foreground">“{order.message}”</p>
                     ) : null}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
+                  <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
+                    <div className="sm:text-right">
                       <p className="text-xl font-medium text-primary">
-                        {formatBRL(order.total_cents)}
+                        {formatBRL(amount)}
                       </p>
                       <Badge variant={order.status === "paid" ? "default" : "secondary"}>
                         {order.status === "paid"
@@ -617,7 +666,8 @@ function CouplePanel() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
             {(ordersQuery.data ?? []).length === 0 ? (
               <p className="text-muted-foreground">Nenhum pedido ainda.</p>
             ) : null}
@@ -664,6 +714,48 @@ function CouplePanel() {
           <TabsContent value="vendors" className="mt-6">
             <VendorDirectory message="Olá! Somos noivos e gostaríamos de um orçamento para o nosso casamento." />
           </TabsContent>
+
+          {!asAdmin ? (
+            <TabsContent value="account" className="mt-6">
+              <Card className="max-w-xl shadow-card">
+                <CardHeader>
+                  <CardTitle className="text-xl">Nome de cadastro</CardTitle>
+                  <CardDescription>
+                    Este é o nome da pessoa conectada nesta conta. Cada noivo pode alterar o próprio nome quando quiser.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form
+                    key={profileQuery.data?.full_name ?? "profile-loading"}
+                    className="space-y-4"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      updateProfile.mutate(new FormData(event.currentTarget));
+                    }}
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor="profile-full-name">Nome completo</Label>
+                      <Input
+                        id="profile-full-name"
+                        name="fullName"
+                        defaultValue={profileQuery.data?.full_name ?? ""}
+                        placeholder="Digite seu nome completo"
+                        minLength={2}
+                        maxLength={120}
+                        autoComplete="name"
+                        disabled={profileQuery.isLoading || updateProfile.isPending}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" disabled={profileQuery.isLoading || updateProfile.isPending}>
+                      <Save className="size-4" />
+                      {updateProfile.isPending ? "Salvando..." : "Salvar nome"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          ) : null}
         </Tabs>
 
       </div>

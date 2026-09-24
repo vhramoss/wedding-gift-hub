@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BODY_FONTS, DISPLAY_FONTS, TEMPLATES, resolveTheme, themeStyle } from "@/lib/theme";
+import { DISPLAY_FONTS, TEMPLATES, resolveTheme, themeStyle } from "@/lib/theme";
 
 type Props = { weddingId: string | null };
 
@@ -29,7 +29,7 @@ export function AppearanceTab({ weddingId }: Props) {
       const { data, error } = await supabase
         .from("weddings")
         .select(
-          "id, bride_name, groom_name, theme_template, theme_primary, theme_accent, theme_background, theme_font_display, theme_font_body",
+          "id, bride_name, groom_name, wedding_date, ceremony_time, venue, party_venue, tagline, cover_image_url, hero_title, hero_opacity, hero_height, hero_fit, hero_text_color, hero_pos_x, hero_pos_y, theme_template, theme_primary, theme_accent, theme_background, theme_font_display, theme_font_body",
         )
         .eq("id", weddingId!)
         .maybeSingle();
@@ -54,7 +54,7 @@ export function AppearanceTab({ weddingId }: Props) {
           theme_accent: draft.accent,
           theme_background: draft.background,
           theme_font_display: draft.fontDisplay,
-          theme_font_body: draft.fontBody,
+          theme_font_body: "Jost",
         })
         .eq("id", weddingId!);
       if (error) throw error;
@@ -75,6 +75,11 @@ export function AppearanceTab({ weddingId }: Props) {
     theme_font_display: draft.fontDisplay,
     theme_font_body: draft.fontBody,
   });
+  const wedding = weddingQuery.data;
+  const previewTitle = wedding?.hero_title?.trim() || `${wedding?.bride_name ?? "Noiva"} & ${wedding?.groom_name ?? "Noivo"}`;
+  const previewDate = wedding?.wedding_date
+    ? new Date(`${wedding.wedding_date}T12:00:00`).toLocaleDateString("pt-BR", { dateStyle: "long" })
+    : null;
 
   return (
     <div className="space-y-6">
@@ -82,7 +87,7 @@ export function AppearanceTab({ weddingId }: Props) {
         <CardHeader>
           <CardTitle className="text-xl">Modelo do site</CardTitle>
           <CardDescription>
-            Escolha um estilo pronto e depois ajuste as cores e as letras do jeito de vocês.
+            Escolha um estilo pronto e depois ajuste as cores e a letra dos títulos.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -133,7 +138,7 @@ export function AppearanceTab({ weddingId }: Props) {
 
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="text-xl">Cores e letras</CardTitle>
+          <CardTitle className="text-xl">Cores e títulos</CardTitle>
           <CardDescription>Personalize cada detalhe do visual.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 sm:grid-cols-3">
@@ -182,23 +187,11 @@ export function AppearanceTab({ weddingId }: Props) {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Letra dos textos</Label>
-            <Select
-              value={draft.fontBody}
-              onValueChange={(v) => setDraft({ ...draft, fontBody: v })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {BODY_FONTS.map((f) => (
-                  <SelectItem key={f} value={f} style={{ fontFamily: `"${f}", sans-serif` }}>
-                    {f}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Textos do site</Label>
+            <div className="flex min-h-10 items-center rounded-md border border-input bg-muted/35 px-3 text-sm text-muted-foreground">
+              Fonte simples e legível, adequada para leitura no celular.
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -209,24 +202,46 @@ export function AppearanceTab({ weddingId }: Props) {
         </CardHeader>
         <CardContent>
           <div
-            style={previewStyle}
-            className="rounded-lg border border-border/70 bg-background px-6 py-12 text-center"
+            style={{ ...previewStyle, backgroundImage: "var(--hero-gradient)" }}
+            className={`relative flex items-center justify-center overflow-hidden rounded-lg border border-border/70 text-center ${
+              wedding?.hero_height === "normal" ? "min-h-56" : wedding?.hero_height === "tela" ? "min-h-96" : "min-h-72"
+            }`}
           >
-            <p className="text-xs uppercase tracking-[0.35em]" style={{ color: draft.accent }}>
-              Save the date
-            </p>
-            <p
-              className="mt-3 text-4xl"
-              style={{ fontFamily: `"${draft.fontDisplay}", Georgia, serif`, color: draft.primary }}
+            {wedding?.cover_image_url ? (
+              <img
+                src={wedding.cover_image_url}
+                alt="Prévia da capa"
+                className={`absolute inset-0 size-full ${wedding.hero_fit === "inteira" ? "object-contain" : "object-cover"}`}
+                style={{
+                  opacity: Math.min(100, Math.max(0, wedding.hero_opacity ?? 30)) / 100,
+                  objectPosition: `${wedding.hero_pos_x ?? 50}% ${wedding.hero_pos_y ?? 50}%`,
+                }}
+              />
+            ) : null}
+            <div
+              className="relative max-w-3xl px-4 py-10"
+              style={wedding?.hero_text_color ? { color: wedding.hero_text_color } : undefined}
             >
-              {weddingQuery.data?.bride_name ?? "Noiva"} & {weddingQuery.data?.groom_name ?? "Noivo"}
-            </p>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Assim ficará o site que os convidados vão ver.
-            </p>
-            <Button className="mt-6" style={{ backgroundColor: draft.primary, color: "#fff" }}>
-              Confirmar presença
-            </Button>
+              <h1 className="text-balance-title whitespace-pre-line font-display text-4xl font-semibold sm:text-5xl">
+                {previewTitle}
+              </h1>
+              <div className="divider-gold mx-auto my-5 w-24" />
+              {previewDate ? (
+                <p className={`text-xs uppercase tracking-[0.16em] ${wedding?.hero_text_color ? "opacity-90" : "text-muted-foreground"}`}>
+                  {previewDate}{wedding?.ceremony_time ? ` · ${wedding.ceremony_time}` : ""}
+                </p>
+              ) : null}
+              {wedding?.party_venue || wedding?.venue ? (
+                <p className={`mt-3 text-sm ${wedding.hero_text_color ? "opacity-90" : "text-muted-foreground"}`}>
+                  {wedding.party_venue ?? wedding.venue}
+                </p>
+              ) : null}
+              {wedding?.tagline ? (
+                <p className={`mx-auto mt-5 max-w-xl whitespace-pre-line text-sm italic ${wedding.hero_text_color ? "opacity-90" : "text-muted-foreground"}`}>
+                  {wedding.tagline}
+                </p>
+              ) : null}
+            </div>
           </div>
         </CardContent>
       </Card>

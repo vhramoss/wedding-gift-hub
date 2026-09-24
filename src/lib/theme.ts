@@ -201,7 +201,8 @@ export function resolveTheme(wedding: WeddingTheme | null | undefined) {
     accent: wedding?.theme_accent || base.accent,
     background: wedding?.theme_background || base.background,
     fontDisplay: wedding?.theme_font_display || base.fontDisplay,
-    fontBody: wedding?.theme_font_body || base.fontBody,
+    // A personalização tipográfica é decorativa. Textos corridos permanecem legíveis.
+    fontBody: "Jost",
   };
 }
 
@@ -254,8 +255,8 @@ export function themeStyle(wedding: WeddingTheme | null | undefined): CSSPropert
     "--color-ring": t.primary,
     "--font-display": `"${t.fontDisplay}", Georgia, serif`,
     "--font-display-src": `"${t.fontDisplay}", Georgia, serif`,
-    "--font-sans": `"${t.fontBody}", ui-sans-serif, system-ui, sans-serif`,
-    "--font-sans-src": `"${t.fontBody}", ui-sans-serif, system-ui, sans-serif`,
+    "--font-sans": '"Jost", ui-sans-serif, system-ui, sans-serif',
+    "--font-sans-src": '"Jost", ui-sans-serif, system-ui, sans-serif',
     "--hero-gradient": [
       `radial-gradient(circle at 15% 10%, ${mix(t.accent, "transparent", 35)}, transparent 45%)`,
       `radial-gradient(circle at 85% 0%, ${mix(t.primary, "transparent", 22)}, transparent 40%)`,
@@ -265,7 +266,7 @@ export function themeStyle(wedding: WeddingTheme | null | undefined): CSSPropert
 
   return {
     ...vars,
-    fontFamily: `"${t.fontBody}", ui-sans-serif, system-ui, sans-serif`,
+    fontFamily: '"Jost", ui-sans-serif, system-ui, sans-serif',
   } as CSSProperties;
 }
 

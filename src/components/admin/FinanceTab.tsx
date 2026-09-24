@@ -23,7 +23,7 @@ export function FinanceTab({ weddingId }: Props) {
   const queryClient = useQueryClient();
 
   const ordersQuery = useQuery({
-    queryKey: ["panel", "orders", weddingId],
+    queryKey: ["panel", "finance-orders", weddingId],
     enabled: Boolean(weddingId),
     queryFn: async () => {
       const { data, error } = await supabase

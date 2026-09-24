@@ -53,7 +53,7 @@ export const Route = createFileRoute("/casamento/$slug/")({
 function Unit({ value, label }: { value: number; label: string }) {
   return (
     <div className="min-w-16 rounded-lg border border-border/60 bg-background/70 px-3 py-3 sm:min-w-20 sm:px-4">
-      <p className="font-display text-2xl text-primary sm:text-4xl">{String(value).padStart(2, "0")}</p>
+      <p className="font-sans font-semibold text-2xl text-primary sm:text-4xl">{String(value).padStart(2, "0")}</p>
       <p className="mt-1 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">{label}</p>
     </div>
   );
@@ -133,7 +133,7 @@ function WeddingHome() {
         </section>
       ) : null}
 
-      <p className="mx-auto mt-14 max-w-3xl whitespace-pre-line text-center font-display text-xl leading-loose tracking-wide text-muted-foreground sm:text-2xl">
+      <p className="mx-auto mt-14 max-w-3xl whitespace-pre-line text-center  text-xl leading-loose tracking-wide text-muted-foreground sm:text-2xl">
         {wedding.welcome_message ??
           "Nossa felicidade é ainda maior quando compartilhada. Esperamos você para celebrar com a gente!"}
       </p>

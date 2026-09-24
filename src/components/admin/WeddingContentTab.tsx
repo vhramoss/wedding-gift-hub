@@ -119,6 +119,28 @@ export function WeddingContentTab({ weddingId }: Props) {
     onError: (e: Error) => toast.error("Erro ao salvar", { description: e.message }),
   });
 
+  const saveCoupleNames = useMutation({
+    mutationFn: async (form: FormData) => {
+      const brideName = String(form.get("bride_name") ?? "").trim();
+      const groomName = String(form.get("groom_name") ?? "").trim();
+      if (!brideName || !groomName) throw new Error("Informe os nomes dos dois noivos.");
+      const { error } = await supabase
+        .from("weddings")
+        .update({ bride_name: brideName, groom_name: groomName })
+        .eq("id", weddingId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Nomes do casal atualizados!");
+      queryClient.invalidateQueries({ queryKey: ["admin", "wedding-content", weddingId] });
+      queryClient.invalidateQueries({ queryKey: ["wedding"] });
+      queryClient.invalidateQueries({ queryKey: ["main-wedding"] });
+      queryClient.invalidateQueries({ queryKey: ["my-wedding"] });
+      queryClient.invalidateQueries({ queryKey: ["panel", "wedding-as-admin"] });
+    },
+    onError: (e: Error) => toast.error("Erro ao salvar nomes", { description: e.message }),
+  });
+
   const saveDates = useMutation({
     mutationFn: async (form: FormData) => {
       const { error } = await supabase
@@ -227,6 +249,51 @@ export function WeddingContentTab({ weddingId }: Props) {
 
   return (
     <div className="space-y-6">
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="text-xl">Nomes do casal</CardTitle>
+          <CardDescription>
+            Altere os nomes cadastrados dos noivos. Eles serão atualizados no site do casamento.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form
+            key={`couple-${weddingId}-${wedding?.['bride_name']}-${wedding?.['groom_name']}`}
+            className="grid gap-4 sm:grid-cols-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              saveCoupleNames.mutate(new FormData(event.currentTarget));
+            }}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="bride_name">Nome da noiva</Label>
+              <Input
+                id="bride_name"
+                name="bride_name"
+                defaultValue={wedding?.['bride_name'] ?? ""}
+                maxLength={120}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="groom_name">Nome do noivo</Label>
+              <Input
+                id="groom_name"
+                name="groom_name"
+                defaultValue={wedding?.['groom_name'] ?? ""}
+                maxLength={120}
+                required
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Button type="submit" disabled={saveCoupleNames.isPending}>
+                {saveCoupleNames.isPending ? "Salvando..." : "Salvar nomes"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="text-xl">Endereço do site</CardTitle>
