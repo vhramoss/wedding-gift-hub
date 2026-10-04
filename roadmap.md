@@ -63,3 +63,8 @@
 - [x] Dependentes com nome por convidado (planilha + edição), só ele confirma os dele
 - [x] Presença sem busca: só pelo convite individual
 - [x] Passo a passo didático da presença na aba "Convidados" (4 etapas + dica), textos de convite e importação mais claros
+
+## Pedido 04/10 — prévia fiel das fotos
+- [x] Prévia no envio para capa (celular/computador) e carrossel, antes de confirmar a foto
+- [x] Carrossel preserva a foto inteira; capa simula o modo e a posição configurados
+- [x] Upload real de recorte vertical validado no painel e na galeria pública; prévia móvel sem transbordamento e sem erros de execução. Fotos temporárias removidas; build automático OK.

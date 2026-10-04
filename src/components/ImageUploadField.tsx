@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { uploadWeddingImage } from "@/lib/upload";
+import type { ImageCropOptions } from "@/components/ImageCropHost";
 
 type Props = {
   label: string;
@@ -13,16 +14,17 @@ type Props = {
   weddingId: string;
   onChange: (url: string) => void;
   hint?: string;
+  preview?: ImageCropOptions["preview"];
 };
 
-export function ImageUploadField({ label, value, weddingId, onChange, hint }: Props) {
+export function ImageUploadField({ label, value, weddingId, onChange, hint, preview }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
   async function handleFile(file: File) {
     setUploading(true);
     try {
-      const { url } = await uploadWeddingImage(file, weddingId);
+      const { url } = await uploadWeddingImage(file, weddingId, { preview });
       onChange(url);
       toast.success("Foto enviada!");
     } catch (e) {

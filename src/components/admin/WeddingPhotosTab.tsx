@@ -90,6 +90,7 @@ export function WeddingPhotosTab({ weddingId }: { weddingId: string | null }) {
         <CardContent className="space-y-4">
           <ImageUploadField
             label="Foto"
+            preview="carousel"
             value={url}
             weddingId={weddingId}
             onChange={setUrl}
@@ -117,7 +118,7 @@ export function WeddingPhotosTab({ weddingId }: { weddingId: string | null }) {
             <img
               src={photo.url}
               alt={photo.caption ?? "Foto do casal"}
-              className="h-48 w-full object-cover"
+               className="h-48 w-full bg-secondary/50 object-contain"
               loading="lazy"
             />
             <CardContent className="space-y-3 pt-4">

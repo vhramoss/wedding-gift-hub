@@ -445,6 +445,7 @@ export function WeddingContentTab({ weddingId }: Props) {
         <CardContent className="space-y-6">
           <ImageUploadField
             label="Foto de capa"
+            preview="cover"
             weddingId={weddingId}
             value={wedding?.['cover_image_url'] ?? ""}
             onChange={(url) => saveImage.mutate({ column: "cover_image_url", url })}

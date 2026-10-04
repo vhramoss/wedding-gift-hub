@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Check, Image as ImageIcon, Music, RotateCcw, Save, Upload } from "lucide-react";
 import { uploadWeddingImage } from "@/lib/upload";
+import { CoverPhotoPreview } from "@/components/CoverPhotoPreview";
 
 import { supabase } from "@/integrations/supabase/client";
 import capaJardimDourado from "@/assets/capa-jardim-dourado.jpg";
@@ -64,12 +65,6 @@ const COVER_PRESETS = [
   { name: "Campo romântico", src: capaCampoRomantico },
   { name: "Minimalista", src: capaMinimalista },
 ] as const;
-
-const PREVIEW_HEIGHT: Record<string, string> = {
-  normal: "h-44",
-  grande: "h-64",
-  tela: "h-80",
-};
 
 export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
   const queryClient = useQueryClient();
@@ -265,35 +260,7 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div
-            className={`relative flex items-center justify-center overflow-hidden rounded-xl border border-border/60 bg-secondary/40 ${
-              PREVIEW_HEIGHT[draft.hero_height] ?? PREVIEW_HEIGHT["grande"]
-            }`}
-          >
-            {previewSrc ? (
-              <img
-                src={previewSrc}
-                alt="Prévia da capa"
-                className={`absolute inset-0 size-full ${
-                  draft.hero_fit === "inteira" ? "object-contain" : "object-cover"
-                }`}
-                style={{
-                  opacity: draft.hero_opacity / 100,
-                  objectPosition: `${draft.hero_pos_x}% ${draft.hero_pos_y}%`,
-                }}
-              />
-            ) : (
-              <p className="px-4 text-center text-sm text-muted-foreground">
-                Envie uma foto de capa em “Fotos” para ver a prévia.
-              </p>
-            )}
-            <div
-              className="relative px-4 text-center"
-              style={draft.hero_text_color ? { color: draft.hero_text_color } : undefined}
-            >
-              <p className="whitespace-pre-line font-display text-2xl sm:text-3xl">{previewHeroTitle}</p>
-            </div>
-          </div>
+          {previewSrc ? <CoverPhotoPreview src={previewSrc} settings={{ ...draft, hero_title: previewHeroTitle }} /> : <p className="text-sm text-muted-foreground">Envie uma foto para ver a prévia.</p>}
         </CardContent>
       </Card>
 
@@ -379,7 +346,7 @@ export function SiteExtrasTab({ weddingId }: { weddingId: string | null }) {
                 if (!file) return;
                 setUploadingCover(true);
                 try {
-                  const { url } = await uploadWeddingImage(file, weddingId);
+                  const { url } = await uploadWeddingImage(file, weddingId, { preview: "cover", cover: { ...draft, hero_title: previewHeroTitle } });
                   setDraft((d) => ({ ...d, cover_image_url: url }));
                   toast.success("Foto carregada! Clique em salvar para aplicar.");
                 } catch (err) {

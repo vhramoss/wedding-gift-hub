@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { requestImageCrop } from "@/components/ImageCropHost";
+import { requestImageCrop, type ImageCropOptions } from "@/components/ImageCropHost";
 
 export const MEDIA_BUCKET = "wedding-media";
 const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
@@ -35,9 +35,14 @@ async function standardizeImage(file: File): Promise<Blob> {
 
 
 /** Envia a imagem para o armazenamento e devolve uma URL válida por 10 anos. */
-export async function uploadWeddingImage(original: File, weddingId: string) {
+export async function uploadWeddingImage(original: File, weddingId: string, options?: ImageCropOptions) {
   if (!original.type.startsWith("image/")) throw new Error("Envie um arquivo de imagem.");
-  const cropped = await requestImageCrop(original);
+  let cropOptions = options;
+  if (!cropOptions?.cover) {
+    const { data } = await supabase.from("weddings").select("hero_height, hero_fit, hero_pos_x, hero_pos_y, hero_opacity, hero_title, hero_text_color, bride_name, groom_name").eq("id", weddingId).maybeSingle();
+    if (data) cropOptions = { ...options, cover: data };
+  }
+  const cropped = await requestImageCrop(original, cropOptions);
   if (!cropped) throw new Error("Envio cancelado.");
   const file = cropped;
   if (file.size > 15 * 1024 * 1024) throw new Error("A imagem deve ter no máximo 15 MB.");

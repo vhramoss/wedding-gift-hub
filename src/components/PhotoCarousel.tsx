@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type Photo = { id: string; url: string; caption?: string | null };
 
@@ -22,7 +23,7 @@ export function PhotoCarousel({ photos, seconds = 6 }: { photos: Photo[]; second
         key={current.id}
         src={current.url}
         alt={current.caption ?? "Foto do casal"}
-        className="aspect-[3/2] w-full animate-in fade-in object-cover duration-700"
+        className="aspect-[3/2] w-full animate-in fade-in bg-secondary/50 object-contain duration-700"
       />
       {current.caption ? (
         <p className="bg-secondary/50 px-4 py-3 text-center text-sm italic text-muted-foreground">
@@ -32,22 +33,26 @@ export function PhotoCarousel({ photos, seconds = 6 }: { photos: Photo[]; second
 
       {photos.length > 1 ? (
         <>
-          <button
+          <Button
+            size="icon"
+            variant="ghost"
             type="button"
             aria-label="Foto anterior"
             onClick={() => setIndex((i) => (i - 1 + photos.length) % photos.length)}
             className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 text-foreground shadow-md backdrop-blur"
           >
             <ChevronLeft className="size-5" />
-          </button>
-          <button
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
             type="button"
             aria-label="Próxima foto"
             onClick={() => setIndex((i) => (i + 1) % photos.length)}
             className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 text-foreground shadow-md backdrop-blur"
           >
             <ChevronRight className="size-5" />
-          </button>
+          </Button>
           <div className="pointer-events-none absolute inset-x-0 bottom-14 flex justify-center gap-2">
             {photos.map((p, i) => (
               <span

@@ -3,14 +3,18 @@ import Cropper, { type Area } from "react-easy-crop";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CoverPhotoPreview, type CoverPreviewSettings } from "@/components/CoverPhotoPreview";
+import { PhotoCarousel } from "@/components/PhotoCarousel";
 
-type Request = { file: File; resolve: (f: File | null) => void };
+export type ImageCropOptions = { preview?: "cover" | "carousel" | undefined; cover?: CoverPreviewSettings | undefined };
+type Request = { file: File; options?: ImageCropOptions | undefined; resolve: (f: File | null) => void };
 let open: ((r: Request) => void) | null = null;
 
 /** Abre o enquadrador e devolve a foto recortada (ou a original). null = cancelado. */
-export function requestImageCrop(file: File): Promise<File | null> {
+export function requestImageCrop(file: File, options?: ImageCropOptions): Promise<File | null> {
   if (!open || file.type === "image/gif") return Promise.resolve(file);
-  return new Promise((resolve) => open!({ file, resolve }));
+  const show = open;
+  return new Promise((resolve) => show({ file, options, resolve }));
 }
 
 const RATIOS = [
@@ -28,7 +32,9 @@ async function cropFile(file: File, src: string, area: Area): Promise<File> {
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(area.width);
   canvas.height = Math.round(area.height);
-  canvas.getContext("2d")!.drawImage(img, area.x, area.y, area.width, area.height, 0, 0, canvas.width, canvas.height);
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Não foi possível preparar a foto.");
+  context.drawImage(img, area.x, area.y, area.width, area.height, 0, 0, canvas.width, canvas.height);
   const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.92));
   return blob ? new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }) : file;
 }
@@ -42,6 +48,26 @@ export function ImageCropHost() {
   const [zoom, setZoom] = useState(1);
   const [area, setArea] = useState<Area | null>(null);
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<"adjust" | "cover" | "carousel">("adjust");
+  const [resultSrc, setResultSrc] = useState("");
+
+  useEffect(() => {
+    if (!req || !src) return;
+    if (!area || (ratio === 0 && zoom === 1)) {
+      setResultSrc(src);
+      return;
+    }
+    let active = true;
+    let url = "";
+    const timer = setTimeout(() => {
+      void cropFile(req.file, src, area).then((file) => {
+        if (!active) return;
+        url = URL.createObjectURL(file);
+        setResultSrc(url);
+      }).catch(() => { if (active) setResultSrc(src); });
+    }, 120);
+    return () => { active = false; clearTimeout(timer); if (url) URL.revokeObjectURL(url); };
+  }, [req, src, area, ratio, zoom]);
 
   useEffect(() => {
     open = (r) => {
@@ -53,6 +79,9 @@ export function ImageCropHost() {
       setRatio(0);
       setZoom(1);
       setCrop({ x: 0, y: 0 });
+      setArea(null);
+      setResultSrc(url);
+      setView(r.options?.preview ?? "adjust");
       setReq(r);
     };
     return () => {
@@ -79,13 +108,20 @@ export function ImageCropHost() {
 
   return (
     <Dialog open={Boolean(req)} onOpenChange={(o) => !o && close(null)}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-h-[92svh] overflow-y-auto max-w-2xl">
         <DialogHeader>
           <DialogTitle>Enquadrar foto</DialogTitle>
           <DialogDescription>Arraste a foto e use o zoom para escolher a parte que vai aparecer.</DialogDescription>
         </DialogHeader>
-        <div className="relative h-[55vh] max-h-[420px] w-full overflow-hidden rounded-lg bg-muted">
-          {src ? (
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" variant={view === "adjust" ? "default" : "outline"} onClick={() => setView("adjust")}>Enquadrar</Button>
+          <Button type="button" size="sm" variant={view === "cover" ? "default" : "outline"} onClick={() => setView("cover")}>Ver na capa</Button>
+          <Button type="button" size="sm" variant={view === "carousel" ? "default" : "outline"} onClick={() => setView("carousel")}>Ver no carrossel</Button>
+        </div>
+        {view === "cover" ? <CoverPhotoPreview src={resultSrc} settings={req?.options?.cover ?? {}} /> : null}
+        {view === "carousel" ? <PhotoCarousel photos={[{ id: "preview", url: resultSrc }]} /> : null}
+        <div className={`relative h-[38svh] max-h-[320px] w-full overflow-hidden rounded-lg bg-muted ${view !== "adjust" ? "hidden" : ""}`}>
+          {src && view === "adjust" ? (
             <Cropper
               image={src}
               crop={crop}
@@ -99,14 +135,14 @@ export function ImageCropHost() {
             />
           ) : null}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className={`flex flex-wrap gap-2 ${view !== "adjust" ? "hidden" : ""}`}>
           {RATIOS.map((r) => (
             <Button key={r.label} type="button" size="sm" variant={ratio === r.value ? "default" : "outline"} onClick={() => setRatio(r.value)}>
               {r.label}
             </Button>
           ))}
         </div>
-        <label className="flex items-center gap-3 text-sm">
+        <label className={`flex items-center gap-3 text-sm ${view !== "adjust" ? "hidden" : ""}`}>
           Zoom
           <input type="range" min={1} max={4} step={0.05} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} className="flex-1 accent-[var(--primary)]" />
         </label>
