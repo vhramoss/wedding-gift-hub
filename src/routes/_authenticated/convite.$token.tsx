@@ -64,6 +64,15 @@ function RedeemInvitePage() {
         return;
       }
       const redeemedRole = data as string;
+      if (redeemedRole === "guest") {
+        const { data: info } = await supabase.rpc("invite_public_info", { _token: token });
+        const row = info?.[0];
+        if (row?.guest_name && row.slug) {
+          queryClient.invalidateQueries({ queryKey: ["my-roles"] });
+          navigate({ to: "/casamento/$slug/confirmar", params: { slug: row.slug }, replace: true });
+          return;
+        }
+      }
       setRole(redeemedRole);
       if (redeemedRole === "owner") {
         const { data: auth } = await supabase.auth.getUser();
@@ -84,7 +93,7 @@ function RedeemInvitePage() {
     return () => {
       active = false;
     };
-  }, [token, queryClient]);
+  }, [token, queryClient, navigate]);
 
   return (
     <div className="min-h-screen">

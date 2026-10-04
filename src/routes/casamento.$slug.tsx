@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, MapPin, ShoppingBag } from "lucide-react";
+import { CalendarDays, Home, MapPin, ShoppingBag } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -28,7 +28,7 @@ const PAGES = [
 ] as const;
 
 const linkClass =
-  "shrink-0 whitespace-nowrap px-2 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-primary sm:px-3 sm:text-xs sm:tracking-[0.18em]";
+  "shrink-0 whitespace-nowrap rounded-full border border-transparent px-2 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-primary sm:px-3 sm:text-xs sm:tracking-[0.18em]";
 
 const HERO_HEIGHTS: Record<string, string> = {
   normal: "min-h-[45svh]",
@@ -169,7 +169,7 @@ function WeddingLayout() {
               to="/casamento/$slug"
               params={{ slug }}
               activeOptions={{ exact: true }}
-              activeProps={{ className: "text-primary" }}
+              activeProps={{ className: "!border-primary/40 bg-primary/10 font-semibold !text-primary", "aria-current": "page" }}
               className={linkClass}
             >
               Início
@@ -179,7 +179,7 @@ function WeddingLayout() {
                 key={page.label}
                 to={page.to}
                 params={{ slug }}
-                activeProps={{ className: "text-primary" }}
+                activeProps={{ className: "!border-primary/40 bg-primary/10 font-semibold !text-primary", "aria-current": "page" }}
                 className={linkClass}
               >
                 {page.label}
@@ -279,13 +279,26 @@ function WeddingLayout() {
         ) : null}
       </footer>
 
-      {wedding.music_enabled ? (
-        <SiteMusic
-          url={wedding.music_url}
-          title={wedding.music_title}
-          autoplay={wedding.music_autoplay}
-        />
-      ) : null}
+      <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2">
+        {!isHomePage ? (
+          <Link
+            to="/casamento/$slug"
+            params={{ slug }}
+            aria-label="Voltar ao início do site"
+            title="Início"
+            className="flex size-11 items-center justify-center rounded-full border border-border/70 bg-background/90 text-accent shadow-lg backdrop-blur transition-colors hover:text-primary"
+          >
+            <Home className="size-5" />
+          </Link>
+        ) : null}
+        {wedding.music_enabled ? (
+          <SiteMusic
+            url={wedding.music_url}
+            title={wedding.music_title}
+            autoplay={wedding.music_autoplay}
+          />
+        ) : null}
+      </div>
     </div>
     </CartProvider>
   );

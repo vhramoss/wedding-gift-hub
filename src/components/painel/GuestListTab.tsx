@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { downloadCsv } from "@/lib/csv";
 import { daysUntil, formatWeddingDate } from "@/hooks/useWedding";
+import { GuestDependentsEditor, ExportGuestLinksButton, GuestPasswordCard, GuestQrButton, useGuestInvites } from "@/components/painel/GuestInviteTools";
 
 const DEFAULT_TEMPLATE =
   "Oi {nome}! Nosso casamento é dia {data} e a gente adoraria muito ter você lá. Confirme sua presença aqui: {link}";
@@ -29,6 +30,8 @@ type Guest = {
   attending_ceremony: boolean | null;
   attending_party: boolean | null;
   dietary_notes: string | null;
+  companion_names: string[];
+  companions_confirmed: string[];
   message: string | null;
   responded_at: string | null;
   reminder_sent_at: string | null;
@@ -50,23 +53,75 @@ function parseList(raw: string, weddingId: string) {
     group_label: string | null;
     phone: string | null;
     cpf: string | null;
+    companion_names: string[];
   }[] = [];
   for (const line of raw.split(/\r?\n/)) {
     const clean = line.trim();
     if (!clean) continue;
-    const parts = clean.split(/[;,\t]/).map((p) => p.trim());
+    const parts = clean.split(/[;\t]|,(?![^|]*\|)/).map((p) => p.trim());
     const name = parts[0];
-    if (!name || /^nome$/i.test(name)) continue;
+    if (!name || /^(nome|convidado)$/i.test(name)) continue;
+    const deps = (parts[5] ?? "").split("|").map((d) => d.trim()).filter(Boolean).slice(0, 20);
     rows.push({
       wedding_id: weddingId,
       name,
-      max_companions: Math.max(0, Math.min(Number(parts[1] ?? 0) || 0, 20)),
+      max_companions: deps.length || Math.max(0, Math.min(Number(parts[1] ?? 0) || 0, 20)),
+      companion_names: deps,
       group_label: parts[2] || null,
       phone: parts[3] || null,
       cpf: parts[4] ? parts[4].replace(/\D/g, "") || null : null,
     });
   }
   return rows;
+}
+
+/** Passo a passo didático da confirmação de presença, para os noivos não se perderem. */
+function RsvpHowItWorks() {
+  const steps = [
+    {
+      title: "1. Monte a lista",
+      text: "Adicione cada convidado com nome, grupo, telefone e CPF. Quem não estiver na lista não consegue confirmar presença. Se alguém levar dependentes (filhos, acompanhantes), cadastre os nomes deles — só esse convidado verá os nomes para marcar na confirmação.",
+    },
+    {
+      title: "2. Defina a senha do casamento",
+      text: "É uma senha única que todos os convidados usam ao criar o perfil pelo convite. Eles não precisam inventar senha — informe a senha junto com o convite.",
+    },
+    {
+      title: "3. Envie o convite de cada pessoa",
+      text: "No cartão de cada convidado, toque em “Convite” para mostrar o QR Code (a pessoa escaneia com a câmera do celular) ou copie o link. Se preferir, use “Exportar convites individuais” para baixar um link pronto para cada convidado e enviar por WhatsApp.",
+    },
+    {
+      title: "4. Acompanhe as respostas",
+      text: "Os números no topo mostram quem confirmou e quem ainda não respondeu. Use os lembretes de WhatsApp para lembrar quem falta, e exporte a planilha quando quiser levar a contagem ao cerimonial.",
+    },
+  ];
+  return (
+    <Card className="shadow-card">
+      <CardHeader>
+        <CardTitle className="font-display text-2xl">Como funciona a confirmação de presença</CardTitle>
+        <CardDescription>
+          Siga os 4 passos abaixo, na ordem — depois é só aguardar as respostas chegarem.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {steps.map((s) => (
+          <div key={s.title} className="flex gap-3">
+            <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              {s.title.slice(0, 1)}
+            </span>
+            <div>
+              <p className="font-medium">{s.title.slice(3)}</p>
+              <p className="text-sm leading-relaxed text-muted-foreground">{s.text}</p>
+            </div>
+          </div>
+        ))}
+        <p className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
+          O convidado escaneia o código, cria o perfil uma única vez com nome e CPF e já confirma a
+          presença na mesma tela — depois, tudo dele fica na área do seu casamento.
+        </p>
+      </CardContent>
+    </Card>
+  );
 }
 
 export function GuestListTab({ weddingId }: { weddingId: string | null }) {
@@ -81,7 +136,7 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
       const { data, error } = await supabase
         .from("wedding_guests")
         .select(
-          "id, name, group_label, phone, cpf, max_companions, attending, companions, attending_ceremony, attending_party, dietary_notes, message, responded_at, reminder_sent_at",
+          "id, name, group_label, phone, cpf, max_companions, attending, companions, attending_ceremony, attending_party, dietary_notes, companion_names, companions_confirmed, message, responded_at, reminder_sent_at",
         )
         .eq("wedding_id", weddingId!)
         .order("name");
@@ -91,6 +146,7 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
   });
 
   const guests = guestsQuery.data ?? [];
+  const guestInvites = useGuestInvites(weddingId ?? "").data ?? [];
 
   const stats = useMemo(() => {
     const yes = guests.filter((g) => g.attending === true);
@@ -226,6 +282,11 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
 
   return (
     <div className="space-y-6">
+      <RsvpHowItWorks />
+      <GuestPasswordCard weddingId={weddingId} />
+      <div className="flex justify-end">
+        <ExportGuestLinksButton weddingId={weddingId} guests={guests} />
+      </div>
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-display text-2xl">
@@ -258,10 +319,13 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
               rows={6}
               value={raw}
               onChange={(e) => setRaw(e.target.value)}
-              placeholder={"Maria Silva; 1; Família da noiva; 19999999999; 123.456.789-00\nJoão Souza; 0; Amigos\nAna Lima"}
+              placeholder={"Maria Silva; 2; Família da noiva; 19999999999; 123.456.789-00; Pedro Silva | Lia Silva\nJoão Souza; 0; Amigos\nAna Lima"}
             />
-            <p className="text-xs text-muted-foreground">
-              Formato: nome; acompanhantes; grupo; telefone; CPF. Dá para colar direto de uma planilha. A confirmação de presença por CPF só encontra quem tiver o CPF nesta lista.
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Um convidado por linha: <strong>nome; acompanhantes; grupo; telefone; CPF; dependentes</strong> (nomes
+              separados por |). Dá para colar direto da planilha. Só o convidado que tem dependentes
+              com nome cadastrados vê os nomes para confirmar — os outros não podem incluir ninguém.
+              Se quiser usar o convite por CPF, o CPF precisa estar aqui.
             </p>
           </div>
 
@@ -274,12 +338,14 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
               onClick={() =>
                 downloadCsv(
                   "lista-de-convidados.csv",
-                  ["Convidado", "CPF", "Grupo", "Resposta", "Acompanhantes", "Cerimônia", "Festa", "Restrição", "Recado"],
+                  ["Convidado", "CPF", "Grupo", "Resposta", "Dependentes", "Dependentes confirmados", "Acompanhantes", "Cerimônia", "Festa", "Restrição", "Recado"],
                   guests.map((g) => [
                     g.name,
                     g.cpf ?? "",
                     g.group_label ?? "",
                     g.attending === null ? "Sem resposta" : g.attending ? "Vai" : "Não vai",
+                    (g.companion_names ?? []).join(" | "),
+                    (g.companions_confirmed ?? []).join(" | "),
                     g.companions,
                     g.attending_ceremony ? "Sim" : "Não",
                     g.attending_party ? "Sim" : "Não",
@@ -417,6 +483,7 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
                   Pode levar {g.max_companions} acompanhante(s)
                   {g.attending ? ` · confirmou ${g.companions}` : ""}
                 </p>
+                <GuestDependentsEditor guestId={g.id} names={g.companion_names ?? []} confirmed={g.companions_confirmed ?? []} />
                 {g.dietary_notes ? (
                   <p className="text-sm text-muted-foreground">Restrição: {g.dietary_notes}</p>
                 ) : null}
@@ -424,6 +491,8 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
                   <p className="mt-1 text-sm italic text-muted-foreground">“{g.message}”</p>
                 ) : null}
               </div>
+              <div className="flex items-center gap-1">
+              <GuestQrButton weddingId={weddingId} guestId={g.id} guestName={g.name} invites={guestInvites} />
               <Button
                 variant="ghost"
                 size="icon"
@@ -432,6 +501,7 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
               >
                 <Trash2 className="size-4" />
               </Button>
+              </div>
             </CardContent>
           </Card>
         ))}

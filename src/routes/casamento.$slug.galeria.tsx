@@ -65,26 +65,6 @@ function GalleryPage() {
             <PhotoCarousel photos={photos} seconds={wedding?.hero_rotate_seconds ?? 6} />
           </div>
 
-          <div className="mt-12 columns-1 gap-4 sm:columns-2 lg:columns-3 [&>figure]:mb-4">
-            {photos.map((photo) => (
-              <figure
-                key={photo.id}
-                className="break-inside-avoid overflow-hidden rounded-xl border border-border/70 shadow-card"
-              >
-                <img
-                  src={photo.url}
-                  alt={photo.caption ?? "Foto do casal"}
-                  loading="lazy"
-                  className="aspect-[3/2] w-full object-cover"
-                />
-                {photo.caption ? (
-                  <figcaption className="bg-secondary/40 px-4 py-3 text-sm italic text-muted-foreground">
-                    {photo.caption}
-                  </figcaption>
-                ) : null}
-              </figure>
-            ))}
-          </div>
         </>
       )}
     </section>

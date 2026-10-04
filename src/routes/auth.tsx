@@ -80,7 +80,7 @@ function AuthPage() {
           <CardHeader className="text-center">
             <CardTitle className="font-display text-2xl">Entrar</CardTitle>
             <CardDescription>
-              Acesse com seu e-mail e senha. Convidados entram pelo link de convite dos noivos.
+              Acesse com seu e-mail e senha. Convidados: use a senha do casamento informada pelos noivos.
             </CardDescription>
           </CardHeader>
           <CardContent>

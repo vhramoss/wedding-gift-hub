@@ -18,7 +18,7 @@ function newToken() {
 
 function inviteUrl(token: string) {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
-  return `${origin}/convite/${token}`;
+  return `${origin}/entrar/${token}`;
 }
 
 type Props = {

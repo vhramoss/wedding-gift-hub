@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { HeartHandshake, Lock, Search } from "lucide-react";
@@ -41,6 +41,8 @@ type Guest = {
   attending_ceremony: boolean | null;
   attending_party: boolean | null;
   dietary_notes: string | null;
+  companion_names?: string[];
+  companions_confirmed?: string[];
 };
 
 function RsvpPage() {
@@ -54,11 +56,24 @@ function RsvpPage() {
 
   const [attending, setAttending] = useState(true);
   const [companions, setCompanions] = useState(0);
+  const [deps, setDeps] = useState<string[]>([]);
   const [ceremony, setCeremony] = useState(true);
   const [party, setParty] = useState(true);
   const [dietary, setDietary] = useState("");
   const [message, setMessage] = useState("");
   const [done, setDone] = useState(false);
+  const [linked, setLinked] = useState<boolean | null>(null);
+
+  // Convidado que entrou pelo convite individual: abre direto a resposta dele.
+  useEffect(() => {
+    if (!user || !wedding?.id) return;
+    supabase.rpc("my_wedding_guest", { _wedding_id: wedding.id }).then(({ data }) => {
+      const mine = (data ?? [])[0] as Guest | undefined;
+      if (mine) pick(mine);
+      setLinked(Boolean(mine));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, wedding?.id]);
 
   const search = useMutation({
     mutationFn: async () => {
@@ -79,6 +94,7 @@ function RsvpPage() {
     setDone(false);
     setAttending(g.attending ?? true);
     setCompanions(g.companions ?? 0);
+    setDeps(g.companions_confirmed ?? []);
     setCeremony(g.attending_ceremony ?? true);
     setParty(g.attending_party ?? true);
     setDietary(g.dietary_notes ?? "");
@@ -90,13 +106,20 @@ function RsvpPage() {
       const { error } = await supabase.rpc("respond_wedding_guest", {
         p_guest_id: guest!.id,
         p_attending: willAttend,
-        p_companions: willAttend ? companions : 0,
+        p_companions: willAttend ? (guest!.companion_names?.length ? deps.length : companions) : 0,
         p_ceremony: ceremony,
         p_party: party,
         ...(dietary.trim() ? { p_dietary: dietary.trim() } : {}),
         ...(message.trim() ? { p_message: message.trim() } : {}),
       });
       if (error) throw error;
+      if (guest!.companion_names?.length) {
+        const { error: depError } = await supabase.rpc("confirm_guest_companions", {
+          p_guest_id: guest!.id,
+          p_names: willAttend ? deps : [],
+        });
+        if (depError) throw depError;
+      }
       return willAttend;
     },
     onSuccess: (willAttend) => {
@@ -152,62 +175,25 @@ function RsvpPage() {
                 alterar algo.
               </span>
             </div>
-          ) : !guest ? (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="term">Procure seu nome na lista de convidados</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="term"
-                    value={term}
-                    onChange={(e) => setTerm(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") search.mutate();
-                    }}
-                    placeholder="Digite seu CPF ou seu nome"
-                  />
-                  <Button onClick={() => search.mutate()} disabled={search.isPending}>
-                    <Search className="size-4" /> Buscar
-                  </Button>
-                </div>
-              </div>
-
-              {results ? (
-                results.length === 0 ? (
-                  <p className="rounded-lg border border-border/60 bg-secondary/30 p-4 text-sm text-muted-foreground">
-                    Não encontramos esse nome na lista. Tente escrever de outro jeito ou fale com os
-                    noivos.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {results.map((g) => (
-                      <button
-                        key={g.id}
-                        type="button"
-                        onClick={() => pick(g)}
-                        className="w-full rounded-lg border border-border/60 p-3 text-left transition-colors hover:border-accent"
-                      >
-                        <span className="font-medium">{g.name}</span>
-                        {g.group_label ? (
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            {g.group_label}
-                          </span>
-                        ) : null}
-                      </button>
-                    ))}
-                  </div>
-                )
-              ) : null}
-            </>
+          ) : linked === null ? null : !guest ? (
+            <div className="space-y-2 rounded-lg border border-border/60 p-5 text-center text-sm text-muted-foreground">
+              <Lock className="mx-auto size-5 text-accent" />
+              <p>
+                Não encontramos um convite ligado à sua conta. Abra o link ou QR Code de convite que os
+                noivos enviaram para você — a confirmação abre automaticamente.
+              </p>
+            </div>
           ) : (
             <>
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-secondary/30 p-3 text-sm">
                 <span>
                   Respondendo como <strong>{guest.name}</strong>
                 </span>
-                <Button variant="link" className="px-0" onClick={() => setGuest(null)}>
-                  Não sou eu
-                </Button>
+                {linked ? null : (
+                  <Button variant="link" className="px-0" onClick={() => setGuest(null)}>
+                    Não sou eu
+                  </Button>
+                )}
               </div>
 
               {done ? (
@@ -269,7 +255,24 @@ function RsvpPage() {
                     />
                   </div>
 
-                  {guest.max_companions > 0 ? (
+                  {guest.companion_names?.length ? (
+                    <div className="space-y-2">
+                      <Label>Quem vai com você?</Label>
+                      {guest.companion_names.map((n) => (
+                        <label key={n} className="flex items-center gap-3 rounded-lg border border-border/60 p-3 text-sm">
+                          <input
+                            type="checkbox"
+                            className="size-4 accent-[var(--primary)]"
+                            checked={deps.includes(n)}
+                            onChange={(e) =>
+                              setDeps((d) => (e.target.checked ? [...d, n] : d.filter((x) => x !== n)))
+                            }
+                          />
+                          {n}
+                        </label>
+                      ))}
+                    </div>
+                  ) : guest.max_companions > 0 ? (
                     <div className="space-y-2">
                       <Label htmlFor="companions">
                         Acompanhantes (até {guest.max_companions})

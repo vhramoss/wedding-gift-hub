@@ -50,3 +50,16 @@
 ## Pedido 24/09 — conta dos noivos
 - [x] Permitir alterar os nomes cadastrados do casal e o nome pessoal da conta na área dos noivos
 - [x] Verificar a alteração e a visualização no celular
+
+## Pedido 04/10
+- [x] Menu do site: destacar a página atual
+- [x] Botão casinha ao lado da música (voltar ao início)
+- [x] Enquadramento manual de fotos com prévia; galeria só com carrossel
+- [x] QR Code de convite de uso único
+- [x] Convite vinculado a um convidado da lista → confirmação simples só dele
+- [x] Senha padrão do casamento definida pelos noivos (convidado não cria senha)
+
+## Pedido 04/10 (2)
+- [x] Dependentes com nome por convidado (planilha + edição), só ele confirma os dele
+- [x] Presença sem busca: só pelo convite individual
+- [x] Passo a passo didático da presença na aba "Convidados" (4 etapas + dica), textos de convite e importação mais claros

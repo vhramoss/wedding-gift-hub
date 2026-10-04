@@ -157,7 +157,7 @@ export function SiteMusic({ url, title, autoplay }: Props) {
         type="button"
         onClick={toggle}
         aria-label={playing ? "Pausar a música" : "Tocar a música"}
-        className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-full border border-border/70 bg-background/90 px-4 py-3 text-xs uppercase tracking-[0.18em] text-muted-foreground shadow-lg backdrop-blur transition-colors hover:text-primary"
+        className="flex h-11 items-center gap-2 rounded-full border border-border/70 bg-background/90 px-4 py-3 text-xs uppercase tracking-[0.18em] text-muted-foreground shadow-lg backdrop-blur transition-colors hover:text-primary"
       >
         {playing ? <Pause className="size-4 text-accent" /> : <Play className="size-4 text-accent" />}
         <Music className="size-4" />

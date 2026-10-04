@@ -522,6 +522,32 @@ export type Database = {
           },
         ]
       }
+      wedding_guest_passwords: {
+        Row: {
+          password: string
+          updated_at: string
+          wedding_id: string
+        }
+        Insert: {
+          password: string
+          updated_at?: string
+          wedding_id: string
+        }
+        Update: {
+          password?: string
+          updated_at?: string
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_guest_passwords_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wedding_guest_signups: {
         Row: {
           cpf: string
@@ -572,7 +598,9 @@ export type Database = {
           attending: boolean | null
           attending_ceremony: boolean | null
           attending_party: boolean | null
+          companion_names: string[]
           companions: number
+          companions_confirmed: string[]
           cpf: string | null
           created_at: string
           dietary_notes: string | null
@@ -594,7 +622,9 @@ export type Database = {
           attending?: boolean | null
           attending_ceremony?: boolean | null
           attending_party?: boolean | null
+          companion_names?: string[]
           companions?: number
+          companions_confirmed?: string[]
           cpf?: string | null
           created_at?: string
           dietary_notes?: string | null
@@ -616,7 +646,9 @@ export type Database = {
           attending?: boolean | null
           attending_ceremony?: boolean | null
           attending_party?: boolean | null
+          companion_names?: string[]
           companions?: number
+          companions_confirmed?: string[]
           cpf?: string | null
           created_at?: string
           dietary_notes?: string | null
@@ -650,6 +682,7 @@ export type Database = {
           created_by: string | null
           email: string | null
           expires_at: string | null
+          guest_id: string | null
           id: string
           note: string | null
           role: Database["public"]["Enums"]["app_role"]
@@ -664,6 +697,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           expires_at?: string | null
+          guest_id?: string | null
           id?: string
           note?: string | null
           role?: Database["public"]["Enums"]["app_role"]
@@ -678,6 +712,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           expires_at?: string | null
+          guest_id?: string | null
           id?: string
           note?: string | null
           role?: Database["public"]["Enums"]["app_role"]
@@ -688,6 +723,13 @@ export type Database = {
           wedding_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "wedding_invites_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_guests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "wedding_invites_wedding_id_fkey"
             columns: ["wedding_id"]
@@ -1305,6 +1347,10 @@ export type Database = {
           total_cents: number
         }[]
       }
+      confirm_guest_companions: {
+        Args: { p_guest_id: string; p_names: string[] }
+        Returns: undefined
+      }
       confirm_order_payment: {
         Args: {
           p_mp_payment_id: number
@@ -1402,9 +1448,37 @@ export type Database = {
         }
         Returns: boolean
       }
+      invite_public_info: {
+        Args: { _token: string }
+        Returns: {
+          bride_name: string
+          groom_name: string
+          guest_name: string
+          guest_password: string
+          role: Database["public"]["Enums"]["app_role"]
+          slug: string
+          valid: boolean
+        }[]
+      }
       is_wedding_coowner: {
         Args: { _user_id: string; _wedding_id: string }
         Returns: boolean
+      }
+      my_wedding_guest: {
+        Args: { _wedding_id: string }
+        Returns: {
+          attending: boolean
+          attending_ceremony: boolean
+          attending_party: boolean
+          companion_names: string[]
+          companions: number
+          companions_confirmed: string[]
+          dietary_notes: string
+          group_label: string
+          id: string
+          max_companions: number
+          name: string
+        }[]
       }
       norm_txt: { Args: { t: string }; Returns: string }
       order_confirm_secret_is_set: { Args: never; Returns: boolean }

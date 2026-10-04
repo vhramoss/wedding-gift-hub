@@ -20,6 +20,7 @@ import { Route as AuthenticatedMeusPresentesRouteImport } from './routes/_authen
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedSuperAdminRouteImport } from './routes/_authenticated/super-admin'
 import { Route as CasamentoSlugRouteImport } from './routes/casamento.$slug'
+import { Route as EntrarTokenRouteImport } from './routes/entrar.$token'
 import { Route as AuthenticatedCerimonialistaTokenRouteImport } from './routes/_authenticated/cerimonialista.$token'
 import { Route as AuthenticatedConviteTokenRouteImport } from './routes/_authenticated/convite.$token'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago-webhook'
@@ -91,6 +92,11 @@ const AuthenticatedSuperAdminRoute = AuthenticatedSuperAdminRouteImport.update({
 const CasamentoSlugRoute = CasamentoSlugRouteImport.update({
   id: '/casamento/$slug',
   path: '/casamento/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntrarTokenRoute = EntrarTokenRouteImport.update({
+  id: '/entrar/$token',
+  path: '/entrar/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedCerimonialistaTokenRoute =
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/painel': typeof AuthenticatedPainelRoute
   '/super-admin': typeof AuthenticatedSuperAdminRoute
   '/casamento/$slug': typeof CasamentoSlugRouteWithChildren
+  '/entrar/$token': typeof EntrarTokenRoute
   '/cerimonialista/$token': typeof AuthenticatedCerimonialistaTokenRoute
   '/convite/$token': typeof AuthenticatedConviteTokenRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
@@ -217,6 +224,7 @@ export interface FileRoutesByTo {
   '/meus-presentes': typeof AuthenticatedMeusPresentesRoute
   '/painel': typeof AuthenticatedPainelRoute
   '/super-admin': typeof AuthenticatedSuperAdminRoute
+  '/entrar/$token': typeof EntrarTokenRoute
   '/cerimonialista/$token': typeof AuthenticatedCerimonialistaTokenRoute
   '/convite/$token': typeof AuthenticatedConviteTokenRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/super-admin': typeof AuthenticatedSuperAdminRoute
   '/casamento/$slug': typeof CasamentoSlugRouteWithChildren
+  '/entrar/$token': typeof EntrarTokenRoute
   '/_authenticated/cerimonialista/$token': typeof AuthenticatedCerimonialistaTokenRoute
   '/_authenticated/convite/$token': typeof AuthenticatedConviteTokenRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
@@ -277,6 +286,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/super-admin'
     | '/casamento/$slug'
+    | '/entrar/$token'
     | '/cerimonialista/$token'
     | '/convite/$token'
     | '/api/public/mercadopago-webhook'
@@ -304,6 +314,7 @@ export interface FileRouteTypes {
     | '/meus-presentes'
     | '/painel'
     | '/super-admin'
+    | '/entrar/$token'
     | '/cerimonialista/$token'
     | '/convite/$token'
     | '/api/public/mercadopago-webhook'
@@ -333,6 +344,7 @@ export interface FileRouteTypes {
     | '/_authenticated/painel'
     | '/_authenticated/super-admin'
     | '/casamento/$slug'
+    | '/entrar/$token'
     | '/_authenticated/cerimonialista/$token'
     | '/_authenticated/convite/$token'
     | '/api/public/mercadopago-webhook'
@@ -359,6 +371,7 @@ export interface RootRouteChildren {
   PrivacidadeRoute: typeof PrivacidadeRoute
   TermosRoute: typeof TermosRoute
   CasamentoSlugRoute: typeof CasamentoSlugRouteWithChildren
+  EntrarTokenRoute: typeof EntrarTokenRoute
   ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
 }
 
@@ -439,6 +452,13 @@ declare module '@tanstack/react-router' {
       path: '/casamento/$slug'
       fullPath: '/casamento/$slug'
       preLoaderRoute: typeof CasamentoSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entrar/$token': {
+      id: '/entrar/$token'
+      path: '/entrar/$token'
+      fullPath: '/entrar/$token'
+      preLoaderRoute: typeof EntrarTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/cerimonialista/$token': {
@@ -621,6 +641,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadeRoute: PrivacidadeRoute,
   TermosRoute: TermosRoute,
   CasamentoSlugRoute: CasamentoSlugRouteWithChildren,
+  EntrarTokenRoute: EntrarTokenRoute,
   ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,
 }
 export const routeTree = rootRouteImport
