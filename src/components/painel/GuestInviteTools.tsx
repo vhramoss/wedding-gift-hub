@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { parseDependentNames } from "@/lib/guest-display";
 import { downloadCsv } from "@/lib/csv";
 
 export function guestInviteUrl(token: string) {
@@ -196,7 +198,7 @@ export function GuestDependentsEditor({ guestId, names, confirmed }: { guestId: 
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(names.join(", "));
   async function save() {
-    const list = text.split(",").map((n) => n.trim()).filter(Boolean).slice(0, 20);
+    const list = parseDependentNames(text);
     const { error } = await supabase
       .from("wedding_guests")
       .update({ companion_names: list, max_companions: list.length, companions_confirmed: confirmed.filter((c) => list.includes(c)) })
@@ -222,7 +224,7 @@ export function GuestDependentsEditor({ guestId, names, confirmed }: { guestId: 
     );
   return (
     <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-      <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Nomes separados por vírgula" />
+      <Textarea aria-label="Nomes dos dependentes" value={text} onChange={(e) => setText(e.target.value)} placeholder="Um nome por linha ou separados por vírgula" rows={3} />
       <Button size="sm" onClick={save}>Salvar</Button>
     </div>
   );

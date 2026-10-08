@@ -139,7 +139,7 @@ function WeddingLayout() {
   const date = formatWeddingDate(wedding.wedding_date);
   const opacity = Math.min(100, Math.max(0, wedding.hero_opacity ?? 30)) / 100;
   const heightClass = HERO_HEIGHTS[wedding.hero_height ?? "grande"] ?? HERO_HEIGHTS["grande"];
-  const fitClass = wedding.hero_fit === "inteira" ? "object-contain" : "object-cover";
+  const fitClass = wedding.hero_fit === "inteira" ? "object-contain" : "object-cover md:object-contain";
   const objectPosition = `${Math.min(100, Math.max(0, wedding.hero_pos_x ?? 50))}% ${Math.min(
     100,
     Math.max(0, wedding.hero_pos_y ?? 50),
@@ -155,16 +155,16 @@ function WeddingLayout() {
       <SiteHeader />
 
       <nav className="sticky top-16 z-30 border-b border-border/70 bg-background/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3">
+        <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-4 py-3">
           <Link
             to="/casamento/$slug"
             params={{ slug }}
-            className="shrink-0 font-display text-xl tracking-[0.25em] text-accent sm:text-2xl sm:tracking-[0.3em]"
+            className="hidden shrink-0 font-display text-xl tracking-[0.25em] text-accent sm:text-2xl sm:tracking-[0.3em]"
           >
             {initials}
           </Link>
 
-          <div className="no-scrollbar flex min-w-0 flex-1 items-center justify-start gap-1 overflow-x-auto sm:justify-end">
+          <div className="no-scrollbar flex min-w-0 flex-1 items-center justify-start gap-1 overflow-x-auto">
             <Link
               to="/casamento/$slug"
               params={{ slug }}
@@ -186,6 +186,8 @@ function WeddingLayout() {
               </Link>
             ))}
 
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
             <Link
               to="/casamento/$slug/presentes"
               params={{ slug }}
@@ -194,7 +196,7 @@ function WeddingLayout() {
               Presentes
             </Link>
             <CartNavLink slug={slug} />
-            {!loadingSession && user ? (
+            {(
               <Link
                 to="/casamento/$slug/confirmar"
                 params={{ slug }}
@@ -202,7 +204,7 @@ function WeddingLayout() {
               >
                 Presença
               </Link>
-            ) : null}
+            )}
           </div>
         </div>
       </nav>

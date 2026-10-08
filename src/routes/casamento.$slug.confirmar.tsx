@@ -20,10 +20,10 @@ export const Route = createFileRoute("/casamento/$slug/confirmar")({
       {
         name: "description",
         content:
-          "Procure seu nome na lista de convidados e confirme sua presença no casamento em poucos segundos.",
+          "Confirme sua presença e os dependentes vinculados ao seu convite.",
       },
       { property: "og:title", content: "Confirmar presença · Casamento" },
-      { property: "og:description", content: "Procure seu nome e confirme sua presença." },
+      { property: "og:description", content: "Confirme sua presença pelo convite individual." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -91,7 +91,7 @@ function RsvpPage() {
 
   const pick = (g: Guest) => {
     setGuest(g);
-    setDone(false);
+    setDone(g.attending !== null);
     setAttending(g.attending ?? true);
     setCompanions(g.companions ?? 0);
     setDeps(g.companions_confirmed ?? []);
@@ -102,20 +102,21 @@ function RsvpPage() {
 
   const save = useMutation({
     mutationFn: async (override?: { attending: boolean }) => {
+      if (!guest) throw new Error("Abra seu convite para confirmar.");
       const willAttend = override?.attending ?? attending;
       const { error } = await supabase.rpc("respond_wedding_guest", {
-        p_guest_id: guest!.id,
+        p_guest_id: guest.id,
         p_attending: willAttend,
-        p_companions: willAttend ? (guest!.companion_names?.length ? deps.length : companions) : 0,
+        p_companions: willAttend ? (guest.companion_names?.length ? deps.length : companions) : 0,
         p_ceremony: ceremony,
         p_party: party,
         ...(dietary.trim() ? { p_dietary: dietary.trim() } : {}),
         ...(message.trim() ? { p_message: message.trim() } : {}),
       });
       if (error) throw error;
-      if (guest!.companion_names?.length) {
+      if (guest.companion_names?.length) {
         const { error: depError } = await supabase.rpc("confirm_guest_companions", {
-          p_guest_id: guest!.id,
+          p_guest_id: guest.id,
           p_names: willAttend ? deps : [],
         });
         if (depError) throw depError;
@@ -166,6 +167,15 @@ function RsvpPage() {
               <Button asChild>
                 <Link to="/auth">Entrar para confirmar</Link>
               </Button>
+            </div>
+          ) : done && guest ? (
+            <div role="status" className="space-y-5 py-6 text-center animate-in fade-in zoom-in-95 duration-300 motion-reduce:animate-none">
+              <HeartHandshake className="mx-auto size-12 text-primary" />
+              <h2 className="font-display text-2xl">{attending ? "Presença confirmada!" : "Resposta registrada!"}</h2>
+              <p className="text-muted-foreground">{guest.name}, {attending ? "deu tudo certo. Esperamos você para celebrar com a gente!" : "os noivos receberam sua resposta. Obrigado por avisar."}</p>
+              {attending && deps.length > 0 ? <p className="text-sm">Dependentes confirmados: {deps.join(", ")}</p> : null}
+              <Button asChild><Link to="/casamento/$slug/presentes" params={{ slug }}>Ver lista de presentes</Link></Button>
+              {open ? <Button variant="link" onClick={() => setDone(false)}>Alterar minha resposta</Button> : null}
             </div>
           ) : !open ? (
             <div className="flex items-start gap-3 rounded-lg border border-border/60 p-4 text-sm text-muted-foreground">

@@ -68,3 +68,8 @@
 - [x] Prévia no envio para capa (celular/computador) e carrossel, antes de confirmar a foto
 - [x] Carrossel preserva a foto inteira; capa simula o modo e a posição configurados
 - [x] Upload real de recorte vertical validado no painel e na galeria pública; prévia móvel sem transbordamento e sem erros de execução. Fotos temporárias removidas; build automático OK.
+
+## Pedido 08/10
+- [x] Ocultar presentes esgotados e manter Presentes/Presença fixos no cabeçalho (375px e 1280px verificados)
+- [x] Preservar fotos inteiras no computador e alinhar prévia
+- [x] Tela de sucesso após presença e cadastro de múltiplos dependentes (regra de nomes testada; confirmação autenticada não exercitada)

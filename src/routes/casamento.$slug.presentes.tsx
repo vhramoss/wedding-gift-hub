@@ -13,6 +13,7 @@ import { useWedding } from "@/hooks/useWedding";
 import { giftQuoteKey, useGiftQuotes } from "@/hooks/useGiftQuotes";
 import { useCart } from "@/lib/cart";
 import { toast } from "sonner";
+import { isGiftAvailable } from "@/lib/guest-display";
 
 export const Route = createFileRoute("/casamento/$slug/presentes")({
   head: () => ({
@@ -22,7 +23,9 @@ export const Route = createFileRoute("/casamento/$slug/presentes")({
         name: "description",
         content: "Escolha um presente para o casal e pague com Pix, cartão de débito ou crédito.",
       },
-      { property: "og:title", content: "Lista de presentes · Casamento" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:title", content: "Lista de presentes · Casa Comigo" },
       { property: "og:description", content: "Presenteie os noivos com pagamento online seguro." },
     ],
   }),
@@ -60,12 +63,7 @@ function GiftsPage() {
       ? baseCents + Math.max(0, Math.round((baseCents * commissionPercent) / 100))
       : baseCents;
 
-  const availableGifts = gifts.filter((gift) => {
-    const total = Math.max(1, gift.shares_total ?? 1);
-    return total > 1
-      ? total - gift.purchased_count > 0
-      : !(gift.quantity > 0 && gift.purchased_count >= gift.quantity);
-  });
+  const availableGifts = gifts.filter(isGiftAvailable);
   const quotesQuery = useGiftQuotes(availableGifts.map((gift) => ({ giftId: gift.id, shares: 1 })));
   const quotes = quotesQuery.data;
   const cartQuotesQuery = useGiftQuotes(
@@ -79,7 +77,7 @@ function GiftsPage() {
     0,
   );
   const categories = ["todos", ...new Set(gifts.map((g) => g.category).filter(Boolean) as string[])];
-  const visible = category === "todos" ? gifts : gifts.filter((g) => g.category === category);
+  const visible = category === "todos" ? availableGifts : availableGifts.filter((g) => g.category === category);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">

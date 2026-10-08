@@ -10,3 +10,5 @@
 <!-- LOVABLE:END -->
 
 - Use CoverPhotoPreview with viewport-based image geometry for cover upload and panel previews; gallery previews reuse PhotoCarousel to prevent a second display crop.
+
+- Guest-facing availability and dependent-name parsing use shared pure helpers with rule tests to keep display and editing consistent.
