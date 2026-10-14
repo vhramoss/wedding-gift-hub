@@ -73,3 +73,12 @@
 - [x] Ocultar presentes esgotados e manter Presentes/Presença fixos no cabeçalho (375px e 1280px verificados)
 - [x] Preservar fotos inteiras no computador e alinhar prévia
 - [x] Tela de sucesso após presença e cadastro de múltiplos dependentes (regra de nomes testada; confirmação autenticada não exercitada)
+
+## Pedido 14/10
+- [x] Editar nome do convidado direto na lista (botão de lápis, sem apagar)
+- [x] Nomes repetidos permitidos (índice único de nome removido; CPF continua único)
+
+- Unificadas as abas "Convidados" e "Convites" da área dos noivos em uma só ("Convidados"): lista, perfis criados, gerador de links/QR Code e co-proprietários.
+
+## Pedido 14/10
+- [x] Aba Presentes: 15 modelos prontos com brincadeiras/trocadilhos (GiftPresets.tsx), um clique adiciona a lista; tsgo limpo

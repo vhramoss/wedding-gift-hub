@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791937974055,
+      "tag": "0000_allow_duplicate_guest_names",
+      "breakpoints": true
+    }
+  ]
+}

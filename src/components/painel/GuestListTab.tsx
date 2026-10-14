@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, MessageCircle, Save, Trash2, Upload, Users } from "lucide-react";
+import { Download, MessageCircle, Pencil, Save, Trash2, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -124,6 +124,61 @@ function RsvpHowItWorks() {
   );
 }
 
+/** Nome do convidado editável: clique no lápis, corrija e salve — sem precisar apagar. */
+function GuestNameEditor({ guestId, name }: { guestId: string; name: string }) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("wedding_guests")
+        .update({ name: value.trim() })
+        .eq("id", guestId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["panel", "guests"] });
+    },
+    onError: (e: Error) => toast.error("Não deu para salvar", { description: e.message }),
+  });
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setValue(name);
+          setEditing(true);
+        }}
+        className="group mb-2 inline-flex items-center gap-1.5 text-left"
+      >
+        <span className="font-medium">{name}</span>
+        <Pencil className="size-3.5 text-muted-foreground opacity-60 transition group-hover:opacity-100" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="mb-2 flex flex-wrap items-center gap-2">
+      <Input
+        aria-label="Nome do convidado"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="max-w-64"
+      />
+      <Button size="sm" disabled={save.isPending || !value.trim()} onClick={() => save.mutate()}>
+        <Save className="size-4" /> Salvar
+      </Button>
+      <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+        Cancelar
+      </Button>
+    </div>
+  );
+}
+
 export function GuestListTab({ weddingId }: { weddingId: string | null }) {
   const queryClient = useQueryClient();
   const [raw, setRaw] = useState("");
@@ -181,7 +236,7 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
     onError: (e: Error) =>
       toast.error("Não foi possível importar", {
         description: e.message.includes("duplicate")
-          ? "Há nomes repetidos com quem já está na lista."
+          ? "Há CPF repetido com quem já está na lista."
           : e.message,
       }),
   });
@@ -325,7 +380,8 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
               Um convidado por linha: <strong>nome; acompanhantes; grupo; telefone; CPF; dependentes</strong> (nomes
               separados por |). Dá para colar direto da planilha. Só o convidado que tem dependentes
               com nome cadastrados vê os nomes para confirmar — os outros não podem incluir ninguém.
-              Se quiser usar o convite por CPF, o CPF precisa estar aqui.
+              Se quiser usar o convite por CPF, o CPF precisa estar aqui. Depois dá para corrigir o
+              nome direto na lista, no botão de lápis — nomes repetidos também são permitidos.
             </p>
           </div>
 
@@ -472,7 +528,7 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
           <Card key={g.id}>
             <CardContent className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="mb-2 font-medium">{g.name}</p>
+                <GuestNameEditor guestId={g.id} name={g.name} />
                 <Badge
                   variant={g.attending === true ? "default" : g.attending === false ? "destructive" : "secondary"}
                 >

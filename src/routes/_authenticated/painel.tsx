@@ -30,6 +30,7 @@ import { PayoutSummary } from "@/components/painel/PayoutSummary";
 import { NotificationsTab } from "@/components/painel/NotificationsTab";
 import { RemindersTab } from "@/components/painel/RemindersTab";
 import { GuestListTab } from "@/components/painel/GuestListTab";
+import { GiftPresets } from "@/components/painel/GiftPresets";
 import { whatsappLink } from "@/lib/brand";
 import { downloadCsv } from "@/lib/csv";
 import { useSession } from "@/hooks/useSession";
@@ -406,7 +407,6 @@ function CouplePanel() {
             <TabsTrigger value="gifts">Presentes</TabsTrigger>
             <TabsTrigger value="orders">Pedidos</TabsTrigger>
             <TabsTrigger value="rsvps">Convidados</TabsTrigger>
-            <TabsTrigger value="invites">Convites</TabsTrigger>
             <TabsTrigger value="appearance">Aparência</TabsTrigger>
             <TabsTrigger value="finance">Financeiro</TabsTrigger>
             <TabsTrigger value="payments">Recebimento</TabsTrigger>
@@ -436,6 +436,7 @@ function CouplePanel() {
           </TabsContent>
 
           <TabsContent value="gifts" className="mt-6 space-y-6">
+            {weddingId ? <GiftPresets weddingId={weddingId} /> : null}
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle className="text-xl">Adicionar presente</CardTitle>
@@ -677,19 +678,16 @@ function CouplePanel() {
             <RemindersTab weddingId={weddingId} />
           </TabsContent>
 
-          <TabsContent value="rsvps" className="mt-6">
+          <TabsContent value="rsvps" className="mt-6 space-y-6">
             <GuestListTab weddingId={weddingId} />
-            {weddingId ? <div className="mt-6"><GuestSignupsCard weddingId={weddingId} /></div> : null}
-          </TabsContent>
-
-          <TabsContent value="invites" className="mt-6 space-y-6">
-            <CoOwnersCard weddingId={weddingId} />
+            {weddingId ? <GuestSignupsCard weddingId={weddingId} /> : null}
             <InviteManager
               weddingId={weddingId}
               roles={["guest"]}
               title="Convidar convidados"
               description="Gere um link e um QR Code para cada convidado criar o login e acessar o site."
             />
+            <CoOwnersCard weddingId={weddingId} />
           </TabsContent>
 
           <TabsContent value="appearance" className="mt-6">
