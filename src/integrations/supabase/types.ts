@@ -552,27 +552,33 @@ export type Database = {
         Row: {
           cpf: string
           created_at: string
+          email: string | null
           full_name: string
           guest_id: string | null
           id: string
+          phone: string | null
           user_id: string
           wedding_id: string
         }
         Insert: {
           cpf: string
           created_at?: string
+          email?: string | null
           full_name: string
           guest_id?: string | null
           id?: string
+          phone?: string | null
           user_id: string
           wedding_id: string
         }
         Update: {
           cpf?: string
           created_at?: string
+          email?: string | null
           full_name?: string
           guest_id?: string | null
           id?: string
+          phone?: string | null
           user_id?: string
           wedding_id?: string
         }
@@ -1560,6 +1566,15 @@ export type Database = {
       }
       register_guest_by_invite: {
         Args: { p_cpf: string; p_name: string; p_token: string }
+        Returns: string
+      }
+      register_guest_contact_by_invite: {
+        Args: {
+          p_kind: string
+          p_name: string
+          p_token: string
+          p_value: string
+        }
         Returns: string
       }
       register_invited_guest: {

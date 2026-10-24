@@ -36,14 +36,16 @@ function RedeemInvitePage() {
   const [needsWedding, setNeedsWedding] = useState(false);
   const [guestName, setGuestName] = useState("");
   const [guestCpf, setGuestCpf] = useState("");
+  const [contactKind, setContactKind] = useState<"phone" | "cpf" | "email">("phone");
   const [saving, setSaving] = useState(false);
 
   async function registerGuest() {
     setSaving(true);
-    const { data, error } = await supabase.rpc("register_guest_by_invite", {
+    const { data, error } = await supabase.rpc("register_guest_contact_by_invite", {
       p_token: token,
       p_name: guestName,
-      p_cpf: guestCpf,
+      p_kind: contactKind,
+      p_value: guestCpf,
     });
     setSaving(false);
     if (error) {
@@ -121,23 +123,48 @@ function RedeemInvitePage() {
             {state === "ok" && role === "guest" && (
               <div className="w-full space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Informe seu nome completo e CPF. Se os noivos tiverem colocado seu CPF na lista de convidados, é só buscar por ele para confirmar presença.
+                  Informe seu nome completo e só um destes dados: telefone, CPF ou e-mail. Use o mesmo que você passou para os noivos.
                 </p>
                 <div className="space-y-1">
                   <Label htmlFor="gname">Nome completo</Label>
                   <Input id="gname" value={guestName} onChange={(e) => setGuestName(e.target.value)} />
                 </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["phone", "cpf", "email"] as const).map((k) => (
+                    <Button
+                      key={k}
+                      type="button"
+                      size="sm"
+                      variant={contactKind === k ? "default" : "outline"}
+                      onClick={() => {
+                        setContactKind(k);
+                        setGuestCpf("");
+                      }}
+                    >
+                      {k === "phone" ? "Telefone" : k === "cpf" ? "CPF" : "E-mail"}
+                    </Button>
+                  ))}
+                </div>
                 <div className="space-y-1">
-                  <Label htmlFor="gcpf">CPF</Label>
+                  <Label htmlFor="gcpf">
+                    {contactKind === "phone" ? "Telefone com DDD" : contactKind === "cpf" ? "CPF" : "E-mail"}
+                  </Label>
                   <Input
                     id="gcpf"
-                    inputMode="numeric"
-                    placeholder="000.000.000-00"
+                    inputMode={contactKind === "email" ? "email" : "numeric"}
+                    type={contactKind === "email" ? "email" : "text"}
+                    placeholder={
+                      contactKind === "phone"
+                        ? "(11) 91234-5678"
+                        : contactKind === "cpf"
+                          ? "000.000.000-00"
+                          : "voce@email.com"
+                    }
                     value={guestCpf}
                     onChange={(e) => setGuestCpf(e.target.value)}
                   />
                 </div>
-                <Button className="w-full" disabled={saving} onClick={registerGuest}>
+                <Button className="w-full" disabled={saving || !guestCpf.trim()} onClick={registerGuest}>
                   {saving ? "Salvando..." : "Criar meu perfil"}
                 </Button>
               </div>

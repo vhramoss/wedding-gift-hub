@@ -82,3 +82,6 @@
 
 ## Pedido 14/10
 - [x] Aba Presentes: 15 modelos prontos com brincadeiras/trocadilhos (GiftPresets.tsx), um clique adiciona a lista; tsgo limpo
+
+## Pedido 24/10
+- [x] Primeiro login do convidado: exigir só um entre telefone, CPF ou e-mail
