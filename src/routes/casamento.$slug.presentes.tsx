@@ -55,29 +55,26 @@ function GiftsPage() {
 
   const gifts = giftsQuery.data ?? [];
 
-  /** Taxa de serviço embutida quando quem paga é o convidado. */
-  const commissionPercent = Number(wedding?.commission_percent ?? 0);
-  const guestPaysFee = wedding?.commission_paid_by === "guest";
-  const withFee = (baseCents: number) =>
-    guestPaysFee
-      ? baseCents + Math.max(0, Math.round((baseCents * commissionPercent) / 100))
-      : baseCents;
-
+  // Só presentes ainda disponíveis podem ser cotados (o servidor recusa cotar os esgotados)
   const availableGifts = gifts.filter(isGiftAvailable);
   const quotesQuery = useGiftQuotes(availableGifts.map((gift) => ({ giftId: gift.id, shares: 1 })));
   const quotes = quotesQuery.data;
   const cartQuotesQuery = useGiftQuotes(
     cart.items.map((item) => ({ giftId: item.giftId, shares: item.shares })),
   );
+  const cartQuotesReady =
+    cart.items.length > 0 &&
+    cart.items.every((item) => cartQuotesQuery.data?.has(giftQuoteKey(item.giftId, item.shares)));
   const cartTotal = cart.items.reduce(
     (sum, item) =>
-      sum +
-      (cartQuotesQuery.data?.get(giftQuoteKey(item.giftId, item.shares))?.total_cents ??
-        item.unitCents * item.shares),
+      sum + (cartQuotesQuery.data?.get(giftQuoteKey(item.giftId, item.shares))?.total_cents ?? 0),
     0,
   );
   const categories = ["todos", ...new Set(gifts.map((g) => g.category).filter(Boolean) as string[])];
-  const visible = category === "todos" ? availableGifts : availableGifts.filter((g) => g.category === category);
+  // Mostra TODOS os presentes ativos; os já presenteados vão para o fim da lista
+  const visible = (category === "todos" ? gifts : gifts.filter((g) => g.category === category))
+    .slice()
+    .sort((a, b) => Number(!isGiftAvailable(a)) - Number(!isGiftAvailable(b)));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
@@ -93,7 +90,7 @@ function GiftsPage() {
           <p className="text-sm">
             <ShoppingBag className="mr-2 inline size-4 text-accent" />
             {cart.count} presente{cart.count > 1 ? "s" : ""} no carrinho ·{" "}
-            <strong>{formatBRL(cartTotal)}</strong>
+            <strong>{cartQuotesReady ? formatBRL(cartTotal) : "…"}</strong>
           </p>
           <Button asChild size="sm">
             <Link to="/casamento/$slug/carrinho" params={{ slug }}>
@@ -136,15 +133,14 @@ function GiftsPage() {
           {visible.map((gift) => {
             const sharesTotal = Math.max(1, gift.shares_total ?? 1);
             const sharesLeft = Math.max(0, sharesTotal - gift.purchased_count);
-            const sharePrice = Math.ceil(gift.price_cents / sharesTotal);
-            const displayedPrice =
-              quotes?.get(giftQuoteKey(gift.id, 1))?.total_cents ?? withFee(sharePrice);
-            const soldOut =
-              sharesTotal > 1
-                ? sharesLeft === 0
-                : gift.quantity > 0 && gift.purchased_count >= gift.quantity;
+            // Preço final (com comissão) vem só da cotação; sem fallback para o valor dos noivos
+            const displayedPrice = quotes?.get(giftQuoteKey(gift.id, 1))?.total_cents ?? null;
+            const soldOut = !isGiftAvailable(gift);
             return (
-              <Card key={gift.id} className="shadow-card overflow-hidden border-border/70 pt-0">
+              <Card
+                key={gift.id}
+                className={`shadow-card overflow-hidden border-border/70 pt-0 ${soldOut ? "opacity-70" : ""}`}
+              >
                 <div className="h-48 w-full bg-secondary/60">
                   {gift.image_url ? (
                     <img
@@ -169,9 +165,13 @@ function GiftsPage() {
                   {gift.description ? (
                     <p className="text-sm text-muted-foreground">{gift.description}</p>
                   ) : null}
-                  <p className="mt-1 font-sans font-semibold text-3xl text-primary">
-                    {formatBRL(displayedPrice)}
-                  </p>
+                  {soldOut ? null : displayedPrice !== null ? (
+                    <p className="mt-1 font-sans font-semibold text-3xl text-primary">
+                      {formatBRL(displayedPrice)}
+                    </p>
+                  ) : (
+                    <Skeleton className="mt-1 h-9 w-32" />
+                  )}
                   {sharesTotal > 1 ? (
                     <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">
@@ -190,13 +190,13 @@ function GiftsPage() {
                   <div className="mt-2 flex flex-col gap-2">
                   <Button
                     variant="outline"
-                    disabled={soldOut || cart.has(gift.id)}
+                    disabled={soldOut || displayedPrice === null || cart.has(gift.id)}
                     onClick={() => {
                       cart.add({
                         giftId: gift.id,
                         name: gift.name,
                         imageUrl: gift.image_url,
-                        unitCents: displayedPrice,
+                        unitCents: displayedPrice ?? 0,
                         shares: 1,
                         maxShares: sharesTotal > 1 ? sharesLeft : 1,
                         isShared: sharesTotal > 1,
