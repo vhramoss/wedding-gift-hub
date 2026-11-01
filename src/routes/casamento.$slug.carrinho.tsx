@@ -115,15 +115,29 @@ function CartPage() {
     retry: 1,
   });
 
-  // Cota apenas a quantidade escolhida de cada presente
-  const quoteItems = cart.items.map((item) => ({ giftId: item.giftId, shares: item.shares }));
+  // Pede a cotação da quantidade escolhida E de 1 cota (para o preço por cota
+  // ser o mesmo que o convidado vê no card). Só adiciona a cota unitária quando
+  // shares !== 1, para não duplicar a consulta.
+  const quoteItems = cart.items.flatMap((item) => {
+    const current = { giftId: item.giftId, shares: item.shares };
+    return item.isShared && item.shares !== 1
+      ? [current, { giftId: item.giftId, shares: 1 }]
+      : [current];
+  });
   const quotesQuery = useGiftQuotes(quoteItems);
 
-  const quotedItems = cart.items.map((item) => ({
-    ...item,
-    // Sem fallback para o preço cadastrado pelos noivos: se não cotou, fica null
-    totalCents: quotesQuery.data?.get(giftQuoteKey(item.giftId, item.shares))?.total_cents ?? null,
-  }));
+  const quotedItems = cart.items.map((item) => {
+    const quote = quotesQuery.data?.get(giftQuoteKey(item.giftId, item.shares));
+    const unitQuote =
+      item.shares === 1 ? quote : quotesQuery.data?.get(giftQuoteKey(item.giftId, 1));
+
+    return {
+      ...item,
+      // Sem fallback para o preço cadastrado pelos noivos: se não cotou, fica null
+      totalCents: quote?.total_cents ?? null,
+      unitQuotedCents: unitQuote?.total_cents ?? null,
+    };
+  });
 
   // Só libera o pagamento quando todas as cotações chegaram
   const quotesReady = quotedItems.every((i) => i.totalCents !== null);
@@ -427,7 +441,9 @@ function CartPage() {
                     {item.totalCents === null
                       ? "Calculando…"
                       : item.isShared
-                        ? `${item.shares} cota${item.shares > 1 ? "s" : ""}`
+                        ? item.unitQuotedCents !== null
+                          ? `${formatBRL(item.unitQuotedCents)} por cota`
+                          : null
                         : formatBRL(item.totalCents)}
                   </p>
                   {item.isShared ? (

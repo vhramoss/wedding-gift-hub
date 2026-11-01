@@ -1,743 +1,240 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { QRCodeCanvas } from "qrcode.react";
-import { toast } from "sonner";
-import {
-  Check,
-  CheckCircle2,
-  Copy,
-  CreditCard,
-  Loader2,
-  QrCode,
-  ShieldCheck,
-  Wallet,
-  XCircle,
-} from "lucide-react";
+import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Check, Gift, ShoppingBag } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useSession } from "@/hooks/useSession";
+import { formatBRL } from "@/lib/br";
+import { useWedding } from "@/hooks/useWedding";
 import { giftQuoteKey, useGiftQuotes } from "@/hooks/useGiftQuotes";
-import { computeCharge, formatBRL, PAYMENT_LABELS, type PaymentMethod } from "@/lib/br";
-import {
-  createGiftOrder,
-  createPixPayment,
-  getMercadoPagoConfig,
-  processCardPayment,
-} from "@/lib/mercadopago.functions";
+import { useCart } from "@/lib/cart";
+import { toast } from "sonner";
+import { isGiftAvailable } from "@/lib/guest-display";
 
-const MercadoPagoCardPayment = lazy(() => import("@/components/MercadoPagoCardPayment"));
-
-export const Route = createFileRoute("/casamento/$slug/presente/$giftId")({
+export const Route = createFileRoute("/casamento/$slug/presentes")({
   head: () => ({
     meta: [
-      { title: "Presentear os noivos · Pagamento" },
+      { title: "Lista de presentes · Casamento" },
       {
         name: "description",
-        content:
-          "Escolha a forma de pagamento — Pix, débito ou crédito em até 12x — e finalize o presente com segurança.",
-      },
-      { property: "og:title", content: "Presentear os noivos · Pagamento" },
-      {
-        property: "og:description",
-        content: "Finalize o presente com Pix, cartão de débito ou crédito em até 12x.",
+        content: "Escolha um presente para o casal e pague com Pix, cartão de débito ou crédito.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:title", content: "Lista de presentes · Casa Comigo" },
+      { property: "og:description", content: "Presenteie os noivos com pagamento online seguro." },
     ],
   }),
-  component: CheckoutPage,
+  component: GiftsPage,
 });
 
-type Phase = "form" | "pix" | "card" | "result";
-type PayResult = { status: "paid" | "pending" | "cancelled"; detail: string };
+function GiftsPage() {
+  const { slug } = Route.useParams();
+  const { data: wedding } = useWedding(slug);
+  const [category, setCategory] = useState<string>("todos");
+  const cart = useCart();
 
-const METHODS: { id: PaymentMethod; hint: string }[] = [
-  { id: "pix", hint: "Aprovação imediata, sem taxa" },
-  { id: "debit", hint: "À vista, sem taxa" },
-  { id: "credit", hint: "Até 12x (com juros a partir de 2x)" },
-];
-
-function CheckoutPage() {
-  const { slug, giftId } = Route.useParams();
-  const { user, loading } = useSession();
-  const navigate = useNavigate();
-
-  const [method, setMethod] = useState<PaymentMethod>("pix");
-  const [installments, setInstallments] = useState(1);
-  const [messageToCouple, setMessageToCouple] = useState("");
-  const [shares, setShares] = useState(1);
-  const [phase, setPhase] = useState<Phase>("form");
-  const [pixData, setPixData] = useState<{
-    qrCode: string;
-    qrCodeBase64: string;
-    orderId: string;
-    totalCents: number;
-  } | null>(null);
-  const [cardOrder, setCardOrder] = useState<{ id: string; totalCents: number } | null>(null);
-  const [cardResult, setCardResult] = useState<PayResult | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [guestName, setGuestName] = useState("");
-  const [guestEmail, setGuestEmail] = useState("");
-  const [guestPhone, setGuestPhone] = useState("");
-
-  const newOrder = useServerFn(createGiftOrder);
-  const createPix = useServerFn(createPixPayment);
-  const processCard = useServerFn(processCardPayment);
-
-  const guestData = user
-    ? {}
-    : {
-        guestName: guestName.trim(),
-        guestEmail: guestEmail.trim(),
-        guestPhone: guestPhone.trim(),
-      };
-
-  const guestReady =
-    Boolean(user) || (guestName.trim().length >= 3 && /.+@.+\..+/.test(guestEmail));
-
-  const giftQuery = useQuery({
-    queryKey: ["gift", giftId],
+  const giftsQuery = useQuery({
+    queryKey: ["gifts", wedding?.id],
+    enabled: Boolean(wedding?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("gifts")
-        .select(
-          "*, weddings!inner(id, slug, bride_name, groom_name)",
-        )
-        .eq("id", giftId)
-        .maybeSingle();
+        .select("*")
+        .eq("wedding_id", wedding!.id)
+        .eq("active", true)
+        .order("price_cents", { ascending: true });
       if (error) throw error;
       return data;
     },
   });
 
-  const gift = giftQuery.data;
-  const wedding = gift?.weddings;
+  const gifts = giftsQuery.data ?? [];
 
-  const mpConfig = useQuery({
-    queryKey: ["mp-config", gift?.wedding_id ?? null],
-    queryFn: () =>
-      getMercadoPagoConfig({
-        data: gift?.wedding_id ? { weddingId: gift.wedding_id } : {},
-      }),
-    retry: 1,
-  });
-  const mpEnabled = Boolean(mpConfig.data?.enabled);
-  const mpPublicKey = mpConfig.data?.publicKey ?? "";
+  /** Taxa de serviço embutida quando quem paga é o convidado. */
+  const commissionPercent = Number(wedding?.commission_percent ?? 0);
+  const guestPaysFee = wedding?.commission_paid_by === "guest";
+  const withFee = (baseCents: number) =>
+    guestPaysFee
+      ? baseCents + Math.max(0, Math.round((baseCents * commissionPercent) / 100))
+      : baseCents;
 
-  const sharesTotal = Math.max(1, gift?.shares_total ?? 1);
-  const sharesLeft = Math.max(0, sharesTotal - (gift?.purchased_count ?? 0));
-
-  // Quantas opções de cota o convidado pode escolher (e, portanto, quantas cotações pedimos).
-  // O seletor usa o mesmo limite, para nunca existir uma opção sem cotação.
-  const maxSelectable = Math.min(10, Math.max(1, sharesLeft));
-  const shareOptions = gift
-    ? Array.from({ length: maxSelectable }, (_, index) => ({
-        giftId: gift.id,
-        shares: index + 1,
-      }))
-    : [];
-  const quoteQuery = useGiftQuotes(shareOptions);
-
-  // Preço final (com comissão) da quantidade escolhida.
-  // Sem fallback para o preço cadastrado pelos noivos: enquanto não cota, fica null.
-  const quotedBase = quoteQuery.data?.get(giftQuoteKey(giftId, shares))?.total_cents ?? null;
-  const quoteReady = quotedBase !== null;
-  const chargeBase = quotedBase ?? 0;
-
-  const charge = useMemo(
-    () => computeCharge(chargeBase, method, installments),
-    [chargeBase, method, installments],
+  const availableGifts = gifts.filter(isGiftAvailable);
+  const quotesQuery = useGiftQuotes(availableGifts.map((gift) => ({ giftId: gift.id, shares: 1 })));
+  const quotes = quotesQuery.data;
+  const cartQuotesQuery = useGiftQuotes(
+    cart.items.map((item) => ({ giftId: item.giftId, shares: item.shares })),
   );
+  const cartTotal = cart.items.reduce(
+    (sum, item) =>
+      sum +
+      (cartQuotesQuery.data?.get(giftQuoteKey(item.giftId, item.shares))?.total_cents ??
+        item.unitCents * item.shares),
+    0,
+  );
+  const categories = ["todos", ...new Set(gifts.map((g) => g.category).filter(Boolean) as string[])];
+  const visible = category === "todos" ? availableGifts : availableGifts.filter((g) => g.category === category);
 
-  // --- Pix ---
-  const startPix = useMutation({
-    mutationFn: async () => {
-      const order = await newOrder({
-        data: {
-          giftId,
-          method: "pix",
-          installments: 1,
-          shares,
-          message: messageToCouple,
-          ...guestData,
-        },
-      });
-      const res = await createPix({
-        data: { orderId: order.orderId, payerEmail: guestEmail.trim() },
-      });
-      return { orderId: order.orderId, ...res };
-    },
-    onSuccess: (res) => {
-      setPixData({
-        qrCode: res.qrCode,
-        qrCodeBase64: res.qrCodeBase64,
-        orderId: res.orderId,
-        totalCents: res.totalCents,
-      });
-      setPhase("pix");
-      toast.success("Pedido criado! Pague com o QR Code abaixo.");
-    },
-    onError: (e: Error) => toast.error("Falha ao gerar Pix", { description: e.message }),
-  });
-
-  // Aguarda a confirmação real (webhook do Mercado Pago marca como pago).
-  useEffect(() => {
-    if (phase !== "pix" || !pixData?.orderId) return;
-    let active = true;
-    const check = async () => {
-      const { data } = await supabase.rpc("public_order_status", {
-        p_order_id: pixData.orderId,
-      });
-      const row = (data ?? [])[0];
-      if (active && row?.status === "paid") {
-        toast.success("Pagamento confirmado! Obrigado pelo presente.");
-        navigate({
-          to: "/casamento/$slug/obrigado",
-          params: { slug },
-          search: { pedido: pixData.orderId },
-        });
-      }
-    };
-    const interval = setInterval(check, 5000);
-    void check();
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
-  }, [phase, pixData, navigate, slug]);
-
-  // --- Cartão ---
-  const startCard = useMutation({
-    mutationFn: async () => {
-      const order = await newOrder({
-        data: {
-          giftId,
-          method,
-          installments: method === "credit" ? installments : 1,
-          shares,
-          message: messageToCouple,
-          ...guestData,
-        },
-      });
-      return order;
-    },
-    onSuccess: (order) => {
-      setCardOrder({ id: order.orderId, totalCents: order.totalCents });
-      setPhase("card");
-    },
-    onError: (e: Error) =>
-      toast.error("Não foi possível iniciar o pagamento", { description: e.message }),
-  });
-
-  const submitCard = async (cardData: {
-    token: string;
-    paymentMethodId: string;
-    issuerId?: string;
-    installments: number;
-  }) => {
-    if (!cardOrder) return;
-    try {
-      const res = await processCard({
-        data: { orderId: cardOrder.id, ...cardData, payerEmail: guestEmail.trim() },
-      });
-      setCardResult({ status: res.status, detail: res.detail });
-      setPhase("result");
-      if (res.status === "paid") {
-        toast.success("Pagamento aprovado. Obrigado pelo presente!");
-        setTimeout(
-          () =>
-            navigate({
-              to: "/casamento/$slug/obrigado",
-              params: { slug },
-              search: { pedido: cardOrder.id },
-            }),
-          2000,
-        );
-      } else if (res.status === "cancelled") {
-        toast.error("Pagamento recusado.");
-      } else {
-        toast.warning("Pagamento em processamento. Aguarde a confirmação.");
-      }
-    } catch (e) {
-      toast.error("Falha no pagamento", {
-        description: e instanceof Error ? e.message : undefined,
-      });
-      setCardResult({ status: "cancelled", detail: "Erro ao processar" });
-      setPhase("result");
-    }
-  };
-
-  if (loading || mpConfig.isLoading || giftQuery.isLoading) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-4 p-8">
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-72 w-full" />
-      </div>
-    );
-  }
-
-  if (giftQuery.isError || !gift || !wedding) {
-    return (
-      <div className="mx-auto max-w-xl p-16 text-center">
-        <h1 className="font-display text-3xl">Presente não encontrado</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Ele pode ter sido removido ou já ter sido comprado.
-        </p>
-        <Button asChild className="mt-6">
-          <Link to="/casamento/$slug/presentes" params={{ slug, giftId }}>
-            Voltar para a lista
-          </Link>
-        </Button>
-      </div>
-    );
-  }
-
-  if (!mpEnabled && phase === "form") {
-    return (
-      <div className="payment-ui mx-auto max-w-2xl px-4 py-16">
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="text-2xl font-semibold">Pagamento indisponível</CardTitle>
-            <CardDescription>
-              O pagamento online ainda não foi ativado pelo administrador do site.
-              Entre em contato para finalizar este presente.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline">
-              <Link to="/casamento/$slug/presentes" params={{ slug, giftId }}>
-                Voltar
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // ---------- Tela Pix ----------
-  if (phase === "pix" && pixData) {
-    return (
-      <div className="payment-ui mx-auto max-w-2xl px-4 py-16">
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-2xl font-semibold">
-              <QrCode className="size-5 text-accent" /> Pague com Pix
-            </CardTitle>
-            <CardDescription>
-              Escaneie o QR Code ou copie o código e cole no app do seu banco.
-              Assim que o pagamento cair, o presente é confirmado automaticamente.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="rounded-lg border bg-secondary/50 p-4 text-center">
-              <p className="text-sm text-muted-foreground">Valor</p>
-              <p className="text-3xl font-medium text-primary">
-                {formatBRL(pixData.totalCents)}
-              </p>
-            </div>
-
-            <div className="flex justify-center">
-              {pixData.qrCodeBase64 ? (
-                <img
-                  src={
-                    pixData.qrCodeBase64.startsWith("data:")
-                      ? pixData.qrCodeBase64
-                      : `data:image/png;base64,${pixData.qrCodeBase64}`
-                  }
-                  alt="QR Code Pix"
-                  className="h-64 w-64 rounded-lg border bg-white p-2"
-                />
-              ) : pixData.qrCode ? (
-                <div className="rounded-lg border bg-white p-3">
-                  <QRCodeCanvas value={pixData.qrCode} size={232} level="M" />
-                </div>
-              ) : null}
-            </div>
-
-            {pixData.qrCode ? (
-              <div className="break-all rounded-lg border bg-card p-4 font-mono text-xs">
-                {pixData.qrCode}
-              </div>
-            ) : null}
-
-            <Button
-              className="w-full"
-              disabled={!pixData.qrCode}
-              onClick={async () => {
-                await navigator.clipboard.writeText(pixData.qrCode);
-                setCopied(true);
-                toast.success("Código Pix copiado!");
-              }}
-            >
-              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              Copiar código Pix
-            </Button>
-
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
-              Aguardando confirmação do pagamento…
-            </div>
-
-            <Button asChild variant="outline" className="w-full">
-              <Link to="/meus-presentes">Ver meus presentes</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // ---------- Tela Cartão (brick do Mercado Pago) ----------
-  if (phase === "card" && cardOrder) {
-    return (
-      <div className="payment-ui mx-auto max-w-2xl px-4 py-16">
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-2xl font-semibold">
-              <CreditCard className="size-5 text-accent" />
-              {method === "debit" ? "Pagar com débito" : "Pagar com crédito"}
-            </CardTitle>
-            <CardDescription>
-              Preencha os dados do cartão. Tudo é processado pelo Mercado Pago —
-              o número e o CVV nunca passam pelo nosso servidor.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg border bg-secondary/50 p-4 text-center">
-              <p className="text-sm text-muted-foreground">Total</p>
-              <p className="text-3xl font-medium text-primary">
-                {formatBRL(cardOrder.totalCents)}
-              </p>
-              {method === "credit" && installments > 1 ? (
-                <p className="text-xs text-muted-foreground">
-                  {installments}x de {formatBRL(Math.round(cardOrder.totalCents / installments))}
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">À vista</p>
-              )}
-            </div>
-
-            <Suspense
-              fallback={
-                <div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
-                  Carregando pagamento por cartão…
-                </div>
-              }
-            >
-              <MercadoPagoCardPayment
-                publicKey={mpPublicKey}
-                amount={cardOrder.totalCents / 100}
-                maxInstallments={method === "credit" ? installments : 1}
-                onSubmit={submitCard}
-                onError={(m) => toast.error("Erro no cartão", { description: m })}
-              />
-            </Suspense>
-
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={() => {
-                setPhase("form");
-                setCardOrder(null);
-              }}
-            >
-              Voltar
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // ---------- Resultado do cartão ----------
-  if (phase === "result" && cardResult) {
-    const isPaid = cardResult.status === "paid";
-    const isPending = cardResult.status === "pending";
-    return (
-      <div className="payment-ui mx-auto max-w-2xl px-4 py-16">
-        <Card className="shadow-card text-center">
-          <CardContent className="flex flex-col items-center gap-4 py-12">
-            {isPaid ? (
-              <CheckCircle2 className="size-16 text-emerald-500" />
-            ) : isPending ? (
-              <Loader2 className="size-16 animate-spin text-primary" />
-            ) : (
-              <XCircle className="size-16 text-destructive" />
-            )}
-            <h2 className="text-2xl font-semibold">
-              {isPaid
-                ? "Pagamento aprovado!"
-                : isPending
-                  ? "Pagamento em processamento"
-                  : "Pagamento recusado"}
-            </h2>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              {isPaid
-                ? "Seu presente foi confirmado. Obrigado!"
-                : isPending
-                  ? "Aguarde alguns instantes pela confirmação."
-                  : cardResult.detail || "Tente novamente com outro cartão."}
-            </p>
-            <Button asChild>
-              <Link to="/meus-presentes">Ver meus presentes</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // ---------- Formulário inicial ----------
   return (
-    <div className="payment-ui mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:gap-8 sm:py-12 lg:grid-cols-[1fr_360px]">
-      <div className="space-y-6">
-        <div>
-          <Link
-            to="/casamento/$slug/presentes"
-            params={{ slug, giftId }}
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            ← Voltar para a lista
-          </Link>
-          <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">Finalizar presente</h1>
+    <div className="mx-auto max-w-6xl px-4 py-16">
+      <h1 className="text-center font-display text-3xl sm:text-4xl">Lista de presentes</h1>
+      <div className="divider-gold mx-auto my-8 w-32" />
+      <p className="mx-auto max-w-2xl text-center text-muted-foreground">
+        Sua presença é o melhor presente, mas se quiser nos mimar, escolha uma opção abaixo. O
+        pagamento é feito aqui mesmo, por Pix ou cartão.
+      </p>
+
+      {cart.count > 0 ? (
+        <div className="mt-8 flex flex-col items-center justify-between gap-3 rounded-xl border border-accent/40 bg-secondary/40 p-4 sm:flex-row">
+          <p className="text-sm">
+            <ShoppingBag className="mr-2 inline size-4 text-accent" />
+            {cart.count} presente{cart.count > 1 ? "s" : ""} no carrinho ·{" "}
+            <strong>{formatBRL(cartTotal)}</strong>
+          </p>
+          <Button asChild size="sm">
+            <Link to="/casamento/$slug/carrinho" params={{ slug }}>
+              Finalizar presentes
+            </Link>
+          </Button>
         </div>
+      ) : null}
 
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="text-xl">Forma de pagamento</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-3">
-              {METHODS.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => {
-                    setMethod(m.id);
-                    if (m.id !== "credit") setInstallments(1);
-                  }}
-                  className={`rounded-lg border p-4 text-left transition-colors ${
-                    method === m.id
-                      ? "border-primary bg-secondary"
-                      : "border-border hover:bg-secondary/50"
-                  }`}
-                >
-                  {m.id === "pix" ? (
-                    <QrCode className="size-5 text-accent" />
-                  ) : m.id === "debit" ? (
-                    <Wallet className="size-5 text-accent" />
+      {categories.length > 2 ? (
+        <div className="mt-8 flex flex-wrap justify-center gap-2">
+          {categories.map((c) => (
+            <Button
+              key={c}
+              size="sm"
+              variant={category === c ? "default" : "outline"}
+              onClick={() => setCategory(c)}
+            >
+              {c}
+            </Button>
+          ))}
+        </div>
+      ) : null}
+
+      {giftsQuery.isLoading ? (
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-72 rounded-xl" />
+          ))}
+        </div>
+      ) : visible.length === 0 ? (
+        <Card className="mt-10 border-dashed">
+          <CardContent className="py-14 text-center text-muted-foreground">
+            <Gift className="mx-auto mb-3 size-6 text-accent" />
+            A lista ainda está sendo montada pelos noivos.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {visible.map((gift) => {
+            const sharesTotal = Math.max(1, gift.shares_total ?? 1);
+            const sharesLeft = Math.max(0, sharesTotal - gift.purchased_count);
+            const sharePrice = Math.ceil(gift.price_cents / sharesTotal);
+            const displayedPrice =
+              quotes?.get(giftQuoteKey(gift.id, 1))?.total_cents ?? withFee(sharePrice);
+            const soldOut =
+              sharesTotal > 1
+                ? sharesLeft === 0
+                : gift.quantity > 0 && gift.purchased_count >= gift.quantity;
+            return (
+              <Card key={gift.id} className="shadow-card overflow-hidden border-border/70 pt-0">
+                <div className="h-48 w-full bg-secondary/60">
+                  {gift.image_url ? (
+                    <img
+                      src={gift.image_url}
+                      alt={gift.name}
+                      className="h-48 w-full object-cover"
+                      loading="lazy"
+                    />
                   ) : (
-                    <CreditCard className="size-5 text-accent" />
+                    <div className="flex h-full items-center justify-center">
+                      <Gift className="size-8 text-accent" />
+                    </div>
                   )}
-                  <p className="mt-2 text-sm font-medium">{PAYMENT_LABELS[m.id]}</p>
-                  <p className="text-xs text-muted-foreground">{m.hint}</p>
-                </button>
-              ))}
-            </div>
-
-            {method === "credit" ? (
-              <div className="space-y-2">
-                <Label>Parcelas</Label>
-                <Select
-                  value={String(installments)}
-                  onValueChange={(v) => setInstallments(Number(v))}
-                  disabled={!quoteReady}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => {
-                      const c = computeCharge(chargeBase, "credit", n);
-                      return (
-                        <SelectItem key={n} value={String(n)}>
-                          {n}x de {formatBRL(c.installmentCents)}
-                          {n === 1 ? " (sem juros)" : ` — total ${formatBRL(c.totalCents)}`}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                {method === "debit"
-                  ? "Cartão de débito é cobrado à vista, sem parcelamento."
-                  : "Pix é cobrado à vista e confirmado automaticamente."}
-              </p>
-            )}
-
-            {sharesTotal > 1 ? (
-              <div className="space-y-2">
-                <Label>Quantas cotas você quer presentear?</Label>
-                <Select value={String(shares)} onValueChange={(v) => setShares(Number(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: maxSelectable }, (_, i) => i + 1).map((n) => {
-                      const optionCents = quoteQuery.data?.get(giftQuoteKey(giftId, n))?.total_cents;
-                      return (
-                        <SelectItem key={n} value={String(n)}>
-                          {n} cota{n > 1 ? "s" : ""}
-                          {optionCents !== undefined ? ` — ${formatBRL(optionCents)}` : ""}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-                {/* Sem preço por cota aqui: o valor cadastrado pelos noivos não inclui a comissão */}
-                <p className="text-xs text-muted-foreground">
-                  Este presente é dividido em {sharesTotal} cotas. Restam {sharesLeft}.
-                </p>
-              </div>
-            ) : null}
-
-            {!user ? (
-              <div className="space-y-4 rounded-lg border border-border/60 p-4">
-                <p className="text-sm text-muted-foreground">
-                  Você não precisa criar conta. Só informe seus dados para os noivos
-                  saberem quem presenteou.
-                </p>
-                <div className="space-y-2">
-                  <Label htmlFor="guestName">Seu nome</Label>
-                  <Input
-                    id="guestName"
-                    value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
-                    placeholder="Nome completo"
-                  />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="guestEmail">E-mail</Label>
-                    <Input
-                      id="guestEmail"
-                      type="email"
-                      value={guestEmail}
-                      onChange={(e) => setGuestEmail(e.target.value)}
-                      placeholder="voce@email.com"
-                    />
+                <CardContent className="flex flex-col gap-2">
+                  {gift.category ? (
+                    <Badge variant="secondary" className="w-fit">
+                      {gift.category}
+                    </Badge>
+                  ) : null}
+                  <h2 className="text-xl">{gift.name}</h2>
+                  {gift.description ? (
+                    <p className="text-sm text-muted-foreground">{gift.description}</p>
+                  ) : null}
+                  <p className="mt-1 font-sans font-semibold text-3xl text-primary">
+                    {formatBRL(displayedPrice)}
+                  </p>
+                  {sharesTotal > 1 ? (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        Por cota · {formatBRL(withFee(gift.price_cents))} no total ·{" "}
+                        {sharesTotal - sharesLeft} de {sharesTotal} cotas presenteadas
+                      </p>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                        <div
+                          className="h-full rounded-full bg-accent"
+                          style={{
+                            width: `${Math.round(((sharesTotal - sharesLeft) / sharesTotal) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="mt-2 flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={soldOut || cart.has(gift.id)}
+                    onClick={() => {
+                      cart.add({
+                        giftId: gift.id,
+                        name: gift.name,
+                        imageUrl: gift.image_url,
+                        unitCents: displayedPrice,
+                        shares: 1,
+                        maxShares: sharesTotal > 1 ? sharesLeft : 1,
+                        isShared: sharesTotal > 1,
+                      });
+                      toast.success("Adicionado ao carrinho!");
+                    }}
+                  >
+                    {cart.has(gift.id) ? (
+                      <>
+                        <Check className="size-4" /> No carrinho
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag className="size-4" /> Adicionar ao carrinho
+                      </>
+                    )}
+                  </Button>
+                  <Button asChild disabled={soldOut}>
+                    <Link
+                      to="/casamento/$slug/presente/$giftId"
+                      params={{ slug, giftId: gift.id }}
+                      disabled={soldOut}
+                    >
+                      {soldOut
+                        ? "Já presenteado"
+                        : sharesTotal > 1
+                          ? "Presentear uma cota"
+                          : "Presentear"}
+                    </Link>
+                  </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="guestPhone">Celular (opcional)</Label>
-                    <Input
-                      id="guestPhone"
-                      value={guestPhone}
-                      onChange={(e) => setGuestPhone(e.target.value)}
-                      placeholder="(00) 00000-0000"
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="space-y-2">
-              <Label htmlFor="msg">Recado para os noivos (opcional)</Label>
-              <Textarea
-                id="msg"
-                maxLength={500}
-                value={messageToCouple}
-                onChange={(e) => setMessageToCouple(e.target.value)}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <aside>
-        <Card className="shadow-card sticky top-24">
-          <CardHeader>
-            <CardTitle className="text-xl">{gift.name}</CardTitle>
-            <CardDescription>
-              Presente para {wedding.bride_name} & {wedding.groom_name}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">
-                {sharesTotal > 1 ? `${shares} cota(s)` : "Valor do presente"}
-              </span>
-              <span>{quoteReady ? formatBRL(chargeBase) : "…"}</span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Taxa de parcelamento</span>
-              <span>
-                {!quoteReady
-                  ? "…"
-                  : charge.totalCents - chargeBase
-                    ? formatBRL(charge.totalCents - chargeBase)
-                    : "Isento"}
-              </span>
-            </div>
-            <Separator />
-            <div className="flex items-baseline justify-between">
-              <span className="font-medium">Total</span>
-              <span className="text-2xl font-medium text-primary">
-                {quoteReady ? formatBRL(charge.totalCents) : "Calculando…"}
-              </span>
-            </div>
-            {quoteReady && method === "credit" && installments > 1 ? (
-              <p className="text-xs text-muted-foreground">
-                {installments}x de {formatBRL(charge.installmentCents)}
-              </p>
-            ) : null}
-
-            {method === "pix" ? (
-              <Button
-                className="mt-4 w-full"
-                size="lg"
-                disabled={startPix.isPending || !guestReady || !quoteReady}
-                onClick={() => startPix.mutate()}
-              >
-                {startPix.isPending ? "Gerando Pix..." : "Pagar com Pix"}
-              </Button>
-            ) : (
-              <Button
-                className="mt-4 w-full"
-                size="lg"
-                disabled={startCard.isPending || !guestReady || !quoteReady}
-                onClick={() => startCard.mutate()}
-              >
-                {startCard.isPending
-                  ? "Iniciando..."
-                  : method === "debit"
-                    ? "Pagar com débito"
-                    : "Pagar com crédito"}
-              </Button>
-            )}
-
-            {!quoteReady && quoteQuery.isError ? (
-              <p className="text-xs text-destructive">
-                Não foi possível calcular o valor. Recarregue a página e tente novamente.
-              </p>
-            ) : null}
-
-            <p className="flex items-center gap-2 text-xs text-muted-foreground">
-              <ShieldCheck className="size-4" />
-              Pagamento processado pelo Mercado Pago. Seus dados ficam protegidos.
-            </p>
-          </CardContent>
-        </Card>
-      </aside>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
