@@ -74,6 +74,9 @@ const METHODS: { id: PaymentMethod; hint: string }[] = [
   { id: "credit", hint: "Até 12x (com juros a partir de 2x)" },
 ];
 
+// Formata um valor que pode ainda não ter sido cotado (null → "…")
+const money = (cents: number | null) => (cents === null ? "…" : formatBRL(cents));
+
 function CartPage() {
   const { slug } = Route.useParams();
   const navigate = useNavigate();
@@ -112,15 +115,33 @@ function CartPage() {
     retry: 1,
   });
 
-  const quoteItems = cart.items.map((item) => ({ giftId: item.giftId, shares: item.shares }));
+  // Pede a cotação da quantidade escolhida E de 1 cota (para o preço por cota
+  // ser o mesmo que o convidado vê no card). Só adiciona a cota unitária quando
+  // shares !== 1, para não duplicar a consulta.
+  const quoteItems = cart.items.flatMap((item) => {
+    const current = { giftId: item.giftId, shares: item.shares };
+    return item.isShared && item.shares !== 1
+      ? [current, { giftId: item.giftId, shares: 1 }]
+      : [current];
+  });
   const quotesQuery = useGiftQuotes(quoteItems);
-  const quotedItems = cart.items.map((item) => ({
-    ...item,
-    totalCents:
-      quotesQuery.data?.get(giftQuoteKey(item.giftId, item.shares))?.total_cents ??
-      item.unitCents * item.shares,
-  }));
-  const chargeBase = quotedItems.reduce((sum, item) => sum + item.totalCents, 0);
+
+  const quotedItems = cart.items.map((item) => {
+    const quote = quotesQuery.data?.get(giftQuoteKey(item.giftId, item.shares));
+    const unitQuote =
+      item.shares === 1 ? quote : quotesQuery.data?.get(giftQuoteKey(item.giftId, 1));
+
+    return {
+      ...item,
+      // Sem fallback para o preço cadastrado pelos noivos: se não cotou, fica null
+      totalCents: quote?.total_cents ?? null,
+      unitQuotedCents: unitQuote?.total_cents ?? null,
+    };
+  });
+
+  // Só libera o pagamento quando todas as cotações chegaram
+  const quotesReady = quotedItems.every((i) => i.totalCents !== null);
+  const chargeBase = quotedItems.reduce((sum, i) => sum + (i.totalCents ?? 0), 0);
   const charge = useMemo(
     () => computeCharge(chargeBase, method, installments),
     [chargeBase, method, installments],
@@ -417,9 +438,13 @@ function CartPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{item.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {item.isShared
-                      ? `${formatBRL(Math.round(item.totalCents / item.shares))} por cota`
-                      : formatBRL(item.totalCents)}
+                    {item.totalCents === null
+                      ? "Calculando…"
+                      : item.isShared
+                        ? item.unitQuotedCents !== null
+                          ? `${formatBRL(item.unitQuotedCents)} por cota`
+                          : null
+                        : formatBRL(item.totalCents)}
                   </p>
                   {item.isShared ? (
                     <div className="mt-2 flex items-center gap-2">
@@ -448,7 +473,7 @@ function CartPage() {
                   ) : null}
                 </div>
                 <div className="text-right">
-                  <p className="font-medium">{formatBRL(item.totalCents)}</p>
+                  <p className="font-medium">{money(item.totalCents)}</p>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -589,30 +614,32 @@ function CartPage() {
                   {i.name}
                   {i.isShared ? ` (${i.shares}x)` : ""}
                 </span>
-                <span>{formatBRL(i.totalCents)}</span>
+                <span>{money(i.totalCents)}</span>
               </div>
             ))}
             <Separator />
             <div className="flex justify-between">
               <span className="text-muted-foreground">Presentes</span>
-              <span>{formatBRL(chargeBase)}</span>
+              <span>{quotesReady ? formatBRL(chargeBase) : "…"}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Taxa de parcelamento</span>
               <span>
-                {charge.totalCents - chargeBase
-                  ? formatBRL(charge.totalCents - chargeBase)
-                  : "Isento"}
+                {!quotesReady
+                  ? "…"
+                  : charge.totalCents - chargeBase
+                    ? formatBRL(charge.totalCents - chargeBase)
+                    : "Isento"}
               </span>
             </div>
             <Separator />
             <div className="flex items-baseline justify-between">
               <span className="font-medium">Total</span>
               <span className="text-2xl font-medium text-primary">
-                {formatBRL(charge.totalCents)}
+                {quotesReady ? formatBRL(charge.totalCents) : "Calculando…"}
               </span>
             </div>
-            {method === "credit" && installments > 1 ? (
+            {quotesReady && method === "credit" && installments > 1 ? (
               <p className="text-xs text-muted-foreground">
                 {installments}x de {formatBRL(charge.installmentCents)}
               </p>
@@ -622,6 +649,7 @@ function CartPage() {
               className="mt-2 w-full"
               disabled={
                 !guestReady ||
+                !quotesReady || // não deixa pagar com valor ainda não cotado
                 !mpConfig.data?.enabled ||
                 startPix.isPending ||
                 startCard.isPending
@@ -636,6 +664,11 @@ function CartPage() {
             {!guestReady ? (
               <p className="text-xs text-muted-foreground">
                 Informe seu nome e e-mail para continuar.
+              </p>
+            ) : null}
+            {!quotesReady && quotesQuery.isError ? (
+              <p className="text-xs text-destructive">
+                Não foi possível calcular os valores. Recarregue a página e tente novamente.
               </p>
             ) : null}
             {mpConfig.data && !mpConfig.data.enabled ? (
