@@ -174,10 +174,9 @@ function GiftsPage() {
                   </p>
                   {sharesTotal > 1 ? (
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">
-                        Por cota · {formatBRL(withFee(gift.price_cents))} no total ·{" "}
-                        {sharesTotal - sharesLeft} de {sharesTotal} cotas presenteadas
-                      </p>
+                        <p className="text-xs text-muted-foreground">
+                          Por cota · {sharesTotal - sharesLeft} de {sharesTotal} cotas presenteadas
+                        </p>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
                         <div
                           className="h-full rounded-full bg-accent"
