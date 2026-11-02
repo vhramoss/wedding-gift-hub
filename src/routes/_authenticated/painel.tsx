@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Download, ExternalLink, Plus, Save, Trash2 } from "lucide-react";
+import { Download, ExternalLink, Plus, Save, Trash2, Undo2 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -228,15 +228,17 @@ function CouplePanel() {
     onError: (e: Error) => toast.error("Erro ao adicionar", { description: e.message }),
   });
 
-  const removeGift = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("gifts").update({ active: false }).eq("id", id);
+  // Remove da lista (active=false) ou restaura (active=true) um presente
+  const toggleGift = useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      const { error } = await supabase.from("gifts").update({ active }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      toast.success("Presente removido da lista.");
+    onSuccess: (_data, vars) => {
+      toast.success(vars.active ? "Presente de volta à lista." : "Presente removido da lista.");
       queryClient.invalidateQueries({ queryKey: ["panel", "gifts", weddingId] });
     },
+    onError: (e: Error) => toast.error("Erro ao atualizar", { description: e.message }),
   });
 
   const updateOrder = useMutation({
@@ -512,15 +514,18 @@ function CouplePanel() {
                         {(gift.shares_total ?? 1) > 1 ? gift.shares_total : gift.quantity}{" "}
                         {(gift.shares_total ?? 1) > 1 ? "cotas · " : ""}
                         presenteado(s)
+                        {gift.active ? "" : " · removido da lista"}
                       </p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => removeGift.mutate(gift.id)}
-                      aria-label={`Remover ${gift.name}`}
+                      onClick={() => toggleGift.mutate({ id: gift.id, active: !gift.active })}
+                      disabled={toggleGift.isPending}
+                      aria-label={gift.active ? `Remover ${gift.name}` : `Restaurar ${gift.name}`}
+                      title={gift.active ? "Remover da lista" : "Restaurar na lista"}
                     >
-                      <Trash2 className="size-4" />
+                      {gift.active ? <Trash2 className="size-4" /> : <Undo2 className="size-4" />}
                     </Button>
                   </CardContent>
                 </Card>
