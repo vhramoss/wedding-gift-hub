@@ -166,7 +166,7 @@ export function GuestQrButton({ weddingId, guestId, guestName, invites }: { wedd
             <DialogTitle>Convite de {guestName}</DialogTitle>
           <DialogDescription>
             Mostre ou envie este código para {guestName} (por WhatsApp, por exemplo). No primeiro
-            acesso, ele cria o perfil com o nome e o CPF — e usa a senha do casamento definida acima.
+            acesso, ele cria a conta com e-mail e usa a senha do casamento. A presença pode ser respondida depois.
           </DialogDescription>
           </DialogHeader>
           {token ? (

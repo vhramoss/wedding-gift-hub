@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { useSession } from "@/hooks/useSession";
 import { giftQuoteKey, useGiftQuotes } from "@/hooks/useGiftQuotes";
+import { completeQuoteTotal } from "@/lib/gift-quote-rules";
 import { computeCharge, formatBRL, PAYMENT_LABELS, type PaymentMethod } from "@/lib/br";
 import {
   createGiftOrder,
@@ -144,16 +145,15 @@ function CheckoutPage() {
   const sharesTotal = Math.max(1, gift?.shares_total ?? 1);
   const sharePriceCents = Math.ceil((gift?.price_cents ?? 0) / sharesTotal);
   const sharesLeft = Math.max(0, sharesTotal - (gift?.purchased_count ?? 0));
-  const baseCents = sharesTotal > 1 ? sharePriceCents * shares : (gift?.price_cents ?? 0);
   const shareOptions = gift
-    ? Array.from({ length: Math.min(10, sharesLeft) }, (_, index) => ({
+    ? Array.from({ length: sharesTotal > 1 ? Math.min(100, sharesLeft) : 1 }, (_, index) => ({
         giftId: gift.id,
         shares: index + 1,
       }))
     : [];
   const quoteQuery = useGiftQuotes(shareOptions);
-  const chargeBase =
-    quoteQuery.data?.get(giftQuoteKey(giftId, shares))?.total_cents ?? baseCents;
+  const quoteTotal = completeQuoteTotal([{ giftId, shares }], quoteQuery.data);
+  const chargeBase = quoteTotal ?? 0;
 
   const charge = useMemo(
     () => computeCharge(chargeBase, method, installments),
@@ -163,6 +163,7 @@ function CheckoutPage() {
   // --- Pix ---
   const startPix = useMutation({
     mutationFn: async () => {
+      if (quoteTotal === null || !mpEnabled) throw new Error("Aguarde o preço final e a liberação do pagamento.");
       const order = await newOrder({
         data: {
           giftId,
@@ -196,8 +197,9 @@ function CheckoutPage() {
     if (phase !== "pix" || !pixData?.orderId) return;
     let active = true;
     const check = async () => {
-      const { data } = await supabase.rpc("public_order_status", {
+      const { data } = await supabase.rpc("public_order_receipt", {
         p_order_id: pixData.orderId,
+        p_slug: slug,
       });
       const row = (data ?? [])[0];
       if (active && row?.status === "paid") {
@@ -220,6 +222,7 @@ function CheckoutPage() {
   // --- Cartão ---
   const startCard = useMutation({
     mutationFn: async () => {
+      if (quoteTotal === null || !mpEnabled) throw new Error("Aguarde o preço final e a liberação do pagamento.");
       const order = await newOrder({
         data: {
           giftId,
@@ -323,6 +326,10 @@ function CheckoutPage() {
         </Card>
       </div>
     );
+  }
+
+  if (phase === "form" && quoteTotal === null) {
+    return <div className="mx-auto max-w-xl px-4 py-16"><h1 className="text-2xl font-semibold">Finalizar presente</h1><p className="mt-4 text-muted-foreground">{quoteQuery.isError ? "Não foi possível calcular o preço. Volte à lista e tente novamente." : "Calculando o valor final…"}</p><Button asChild variant="outline" className="mt-4"><Link to="/casamento/$slug/presentes" params={{ slug }}>Voltar para a lista</Link></Button></div>;
   }
 
   // ---------- Tela Pix ----------
@@ -585,20 +592,16 @@ function CheckoutPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: Math.max(1, sharesLeft) }, (_, i) => i + 1).map((n) => (
+                    {Array.from({ length: Math.min(100, sharesLeft) }, (_, i) => i + 1).map((n) => (
                       <SelectItem key={n} value={String(n)}>
                         {n} cota{n > 1 ? "s" : ""} —{" "}
-                        {formatBRL(
-                          quoteQuery.data?.get(giftQuoteKey(giftId, n))?.total_cents ??
-                            sharePriceCents * n,
-                        )}
+                        {formatBRL(quoteQuery.data?.get(giftQuoteKey(giftId, n))?.total_cents ?? 0)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Este presente é dividido em {sharesTotal} cotas de {formatBRL(sharePriceCents)}.
-                  Restam {sharesLeft}.
+                  Este presente é dividido em {sharesTotal} cotas. Restam {sharesLeft}.
                 </p>
               </div>
             ) : null}

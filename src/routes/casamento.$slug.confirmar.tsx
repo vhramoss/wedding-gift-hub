@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import { HeartHandshake, Lock, Search } from "lucide-react";
+import { HeartHandshake, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -50,8 +50,6 @@ function RsvpPage() {
   const { data: wedding } = useWedding(slug);
   const { user, loading: loadingSession } = useSession();
 
-  const [term, setTerm] = useState("");
-  const [results, setResults] = useState<Guest[] | null>(null);
   const [guest, setGuest] = useState<Guest | null>(null);
 
   const [attending, setAttending] = useState(true);
@@ -74,20 +72,6 @@ function RsvpPage() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, wedding?.id]);
-
-  const search = useMutation({
-    mutationFn: async () => {
-      if (term.trim().length < 3) throw new Error("Digite seu CPF ou pelo menos 3 letras do seu nome.");
-      const { data, error } = await supabase.rpc("search_wedding_guests", {
-        p_wedding_id: wedding!.id,
-        p_query: term.trim(),
-      });
-      if (error) throw error;
-      return (data ?? []) as Guest[];
-    },
-    onSuccess: (data) => setResults(data),
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   const pick = (g: Guest) => {
     setGuest(g);
@@ -316,6 +300,9 @@ function RsvpPage() {
                 disabled={save.isPending}
               >
                 Enviar resposta
+              </Button>
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/casamento/$slug" params={{ slug }}>Confirmar depois · Ver o casamento</Link>
               </Button>
             </>
           )}

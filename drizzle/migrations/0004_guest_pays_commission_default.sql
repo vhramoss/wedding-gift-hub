@@ -1,0 +1,2 @@
+ALTER TABLE public.weddings ALTER COLUMN commission_paid_by SET DEFAULT 'guest';
+COMMENT ON COLUMN public.weddings.commission_paid_by IS 'Platform commission is paid by the guest in the final price; existing orders retain their recorded totals.';

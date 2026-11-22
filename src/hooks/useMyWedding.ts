@@ -1,23 +1,38 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { publicWeddingClient, validPublicWedding } from "@/lib/public-wedding";
+import { validPublicWedding } from "@/lib/public-wedding";
 
-/** Casamento em que a pessoa foi adicionada como co-titular. */
+/** Casamento em que a pessoa foi adicionada como co-titular (ex.: a noiva). */
 async function fetchCoOwnedWedding(userId: string) {
-  const link = await supabase.from("wedding_owners").select("wedding_id").eq("user_id", userId).order("created_at", { ascending: true }).limit(1).maybeSingle();
+  const link = await supabase
+    .from("wedding_owners")
+    .select("wedding_id")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
   if (link.error) throw link.error;
   if (!link.data?.wedding_id) return null;
-  const { data, error } = await supabase.from("weddings").select("*").eq("id", link.data.wedding_id).maybeSingle();
+  const { data, error } = await supabase
+    .from("weddings")
+    .select("*")
+    .eq("id", link.data.wedding_id)
+    .maybeSingle();
   if (error) throw error;
   return data;
 }
 
-/** O casamento público do site. */
+/** O casamento do site (modelo de um casal só). */
 export function useMainWedding() {
   return useQuery({
     queryKey: ["main-wedding"],
     queryFn: async () => {
-      const { data, error } = await publicWeddingClient.from("wedding_public").select("*").order("created_at", { ascending: true }).limit(1).maybeSingle();
+      const { data, error } = await supabase
+        .from("wedding_public")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
       if (error) throw error;
       return validPublicWedding(data);
     },
@@ -31,7 +46,13 @@ export function useMyWedding(userId: string | undefined) {
     enabled: Boolean(userId),
     queryFn: async () => {
       if (!userId) return null;
-      const { data, error } = await supabase.from("weddings").select("*").eq("owner_id", userId).order("created_at", { ascending: true }).limit(1).maybeSingle();
+      const { data, error } = await supabase
+        .from("weddings")
+        .select("*")
+        .eq("owner_id", userId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
       if (error) throw error;
       if (data) return data;
       return await fetchCoOwnedWedding(userId);
@@ -39,28 +60,66 @@ export function useMyWedding(userId: string | undefined) {
   });
 }
 
-/** Noivos acessam gestão; convidados acessam somente a projeção pública. */
+/**
+ * O casamento certo para a pessoa logada: o dela (noivos) ou, para convidados,
+ * aquele em que já confirmou presença/presenteou. Sem vínculo, não redireciona.
+ */
 export function useHomeWedding(userId: string | undefined) {
   return useQuery({
     queryKey: ["home-wedding", userId],
     enabled: Boolean(userId),
     queryFn: async () => {
       if (!userId) return null;
-      const own = await supabase.from("weddings").select("*").eq("owner_id", userId).order("created_at", { ascending: true }).limit(1).maybeSingle();
+      const own = await supabase
+        .from("weddings")
+        .select("*")
+        .eq("owner_id", userId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
       if (own.error) throw own.error;
       if (own.data) return own.data;
+
       const coOwned = await fetchCoOwnedWedding(userId);
       if (coOwned) return coOwned;
-      const rsvp = await supabase.from("rsvps").select("wedding_id").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+
+      const invited = await supabase.rpc("my_invited_weddings");
+      if (invited.error) throw invited.error;
+      const invitedId = invited.data?.[0]?.wedding_id;
+      if (invitedId) {
+        const { data, error } = await supabase.from("wedding_public").select("*").eq("id", invitedId).maybeSingle();
+        if (error) throw error;
+        return validPublicWedding(data);
+      }
+
+      const rsvp = await supabase
+        .from("rsvps")
+        .select("wedding_id")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
       if (rsvp.error) throw rsvp.error;
+
       let weddingId = rsvp.data?.wedding_id ?? null;
       if (!weddingId) {
-        const order = await supabase.from("orders").select("wedding_id").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+        const order = await supabase
+          .from("orders")
+          .select("wedding_id")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
         if (order.error) throw order.error;
         weddingId = order.data?.wedding_id ?? null;
       }
       if (!weddingId) return null;
-      const { data, error } = await publicWeddingClient.from("wedding_public").select("*").eq("id", weddingId).maybeSingle();
+
+      const { data, error } = await supabase
+        .from("wedding_public")
+        .select("*")
+        .eq("id", weddingId)
+        .maybeSingle();
       if (error) throw error;
       return validPublicWedding(data);
     },

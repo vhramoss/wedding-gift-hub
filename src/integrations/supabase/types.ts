@@ -80,6 +80,13 @@ export type Database = {
             foreignKeyName: "gifts_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gifts_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
             referencedRelation: "weddings"
             referencedColumns: ["id"]
           },
@@ -188,6 +195,13 @@ export type Database = {
             foreignKeyName: "orders_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
             referencedRelation: "weddings"
             referencedColumns: ["id"]
           },
@@ -225,6 +239,13 @@ export type Database = {
           wedding_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "planner_invites_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "planner_invites_wedding_id_fkey"
             columns: ["wedding_id"]
@@ -305,6 +326,13 @@ export type Database = {
           wedding_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "rsvps_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rsvps_wedding_id_fkey"
             columns: ["wedding_id"]
@@ -413,6 +441,13 @@ export type Database = {
             foreignKeyName: "wedding_announcements_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_announcements_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
             referencedRelation: "weddings"
             referencedColumns: ["id"]
           },
@@ -482,6 +517,13 @@ export type Database = {
             foreignKeyName: "wedding_expenses_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_expenses_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
             referencedRelation: "weddings"
             referencedColumns: ["id"]
           },
@@ -517,6 +559,13 @@ export type Database = {
             foreignKeyName: "wedding_fee_tiers_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_fee_tiers_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
             referencedRelation: "weddings"
             referencedColumns: ["id"]
           },
@@ -539,6 +588,13 @@ export type Database = {
           wedding_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "wedding_guest_passwords_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "wedding_guest_passwords_wedding_id_fkey"
             columns: ["wedding_id"]
@@ -588,6 +644,13 @@ export type Database = {
             columns: ["guest_id"]
             isOneToOne: false
             referencedRelation: "wedding_guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_guest_signups_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_public"
             referencedColumns: ["id"]
           },
           {
@@ -677,6 +740,13 @@ export type Database = {
             foreignKeyName: "wedding_guests_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_guests_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
             referencedRelation: "weddings"
             referencedColumns: ["id"]
           },
@@ -740,6 +810,13 @@ export type Database = {
             foreignKeyName: "wedding_invites_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_invites_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
             referencedRelation: "weddings"
             referencedColumns: ["id"]
           },
@@ -777,6 +854,13 @@ export type Database = {
           wedding_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "wedding_messages_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "wedding_messages_wedding_id_fkey"
             columns: ["wedding_id"]
@@ -819,6 +903,13 @@ export type Database = {
             foreignKeyName: "wedding_notifications_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_notifications_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
             referencedRelation: "weddings"
             referencedColumns: ["id"]
           },
@@ -844,6 +935,13 @@ export type Database = {
           wedding_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "wedding_owners_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "wedding_owners_wedding_id_fkey"
             columns: ["wedding_id"]
@@ -898,6 +996,13 @@ export type Database = {
             foreignKeyName: "wedding_payment_accounts_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: true
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_payment_accounts_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
             referencedRelation: "weddings"
             referencedColumns: ["id"]
           },
@@ -938,6 +1043,13 @@ export type Database = {
           wedding_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "wedding_payouts_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "wedding_payouts_wedding_id_fkey"
             columns: ["wedding_id"]
@@ -992,6 +1104,13 @@ export type Database = {
             foreignKeyName: "wedding_people_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_people_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
             referencedRelation: "weddings"
             referencedColumns: ["id"]
           },
@@ -1033,6 +1152,43 @@ export type Database = {
             foreignKeyName: "wedding_photos_wedding_id_fkey"
             columns: ["wedding_id"]
             isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_photos_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "weddings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wedding_private: {
+        Row: {
+          settings: Json
+          wedding_id: string
+        }
+        Insert: {
+          settings?: Json
+          wedding_id: string
+        }
+        Update: {
+          settings?: Json
+          wedding_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_private_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_private_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: true
             referencedRelation: "weddings"
             referencedColumns: ["id"]
           },
@@ -1079,6 +1235,13 @@ export type Database = {
           wedding_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "wedding_reminders_wedding_id_fkey"
+            columns: ["wedding_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "wedding_reminders_wedding_id_fkey"
             columns: ["wedding_id"]
@@ -1330,7 +1493,171 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      wedding_public: {
+        Row: {
+          approval_status: string | null
+          bride_name: string | null
+          bride_photo_url: string | null
+          ceremony_address: string | null
+          ceremony_map_url: string | null
+          ceremony_time: string | null
+          ceremony_venue: string | null
+          couple_intro: string | null
+          cover_image_url: string | null
+          created_at: string | null
+          dress_code: string | null
+          groom_name: string | null
+          groom_photo_url: string | null
+          hashtag: string | null
+          hero_fit: string | null
+          hero_height: string | null
+          hero_opacity: number | null
+          hero_pos_x: number | null
+          hero_pos_y: number | null
+          hero_rotate_seconds: number | null
+          hero_text_color: string | null
+          hero_title: string | null
+          id: string | null
+          monogram: string | null
+          music_autoplay: boolean | null
+          music_enabled: boolean | null
+          music_title: string | null
+          music_url: string | null
+          party_address: string | null
+          party_image_url: string | null
+          party_map_url: string | null
+          party_time: string | null
+          party_venue: string | null
+          published: boolean | null
+          require_login: boolean | null
+          rsvp_deadline: string | null
+          slug: string | null
+          story_how_we_met: string | null
+          story_proposal: string | null
+          story_text: string | null
+          tagline: string | null
+          theme_accent: string | null
+          theme_background: string | null
+          theme_font_body: string | null
+          theme_font_display: string | null
+          theme_primary: string | null
+          theme_template: string | null
+          tips: string | null
+          updated_at: string | null
+          venue: string | null
+          wedding_date: string | null
+          welcome_message: string | null
+        }
+        Insert: {
+          approval_status?: string | null
+          bride_name?: string | null
+          bride_photo_url?: string | null
+          ceremony_address?: string | null
+          ceremony_map_url?: string | null
+          ceremony_time?: string | null
+          ceremony_venue?: string | null
+          couple_intro?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          dress_code?: string | null
+          groom_name?: string | null
+          groom_photo_url?: string | null
+          hashtag?: string | null
+          hero_fit?: string | null
+          hero_height?: string | null
+          hero_opacity?: number | null
+          hero_pos_x?: number | null
+          hero_pos_y?: number | null
+          hero_rotate_seconds?: number | null
+          hero_text_color?: string | null
+          hero_title?: string | null
+          id?: string | null
+          monogram?: string | null
+          music_autoplay?: boolean | null
+          music_enabled?: boolean | null
+          music_title?: string | null
+          music_url?: string | null
+          party_address?: string | null
+          party_image_url?: string | null
+          party_map_url?: string | null
+          party_time?: string | null
+          party_venue?: string | null
+          published?: boolean | null
+          require_login?: boolean | null
+          rsvp_deadline?: string | null
+          slug?: string | null
+          story_how_we_met?: string | null
+          story_proposal?: string | null
+          story_text?: string | null
+          tagline?: string | null
+          theme_accent?: string | null
+          theme_background?: string | null
+          theme_font_body?: string | null
+          theme_font_display?: string | null
+          theme_primary?: string | null
+          theme_template?: string | null
+          tips?: string | null
+          updated_at?: string | null
+          venue?: string | null
+          wedding_date?: string | null
+          welcome_message?: string | null
+        }
+        Update: {
+          approval_status?: string | null
+          bride_name?: string | null
+          bride_photo_url?: string | null
+          ceremony_address?: string | null
+          ceremony_map_url?: string | null
+          ceremony_time?: string | null
+          ceremony_venue?: string | null
+          couple_intro?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          dress_code?: string | null
+          groom_name?: string | null
+          groom_photo_url?: string | null
+          hashtag?: string | null
+          hero_fit?: string | null
+          hero_height?: string | null
+          hero_opacity?: number | null
+          hero_pos_x?: number | null
+          hero_pos_y?: number | null
+          hero_rotate_seconds?: number | null
+          hero_text_color?: string | null
+          hero_title?: string | null
+          id?: string | null
+          monogram?: string | null
+          music_autoplay?: boolean | null
+          music_enabled?: boolean | null
+          music_title?: string | null
+          music_url?: string | null
+          party_address?: string | null
+          party_image_url?: string | null
+          party_map_url?: string | null
+          party_time?: string | null
+          party_venue?: string | null
+          published?: boolean | null
+          require_login?: boolean | null
+          rsvp_deadline?: string | null
+          slug?: string | null
+          story_how_we_met?: string | null
+          story_proposal?: string | null
+          story_text?: string | null
+          tagline?: string | null
+          theme_accent?: string | null
+          theme_background?: string | null
+          theme_font_body?: string | null
+          theme_font_display?: string | null
+          theme_primary?: string | null
+          theme_template?: string | null
+          tips?: string | null
+          updated_at?: string | null
+          venue?: string | null
+          wedding_date?: string | null
+          welcome_message?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_planner_invite: {
@@ -1470,6 +1797,15 @@ export type Database = {
         Args: { _user_id: string; _wedding_id: string }
         Returns: boolean
       }
+      my_invited_weddings: {
+        Args: never
+        Returns: {
+          bride_name: string
+          groom_name: string
+          slug: string
+          wedding_id: string
+        }[]
+      }
       my_wedding_guest: {
         Args: { _wedding_id: string }
         Returns: {
@@ -1509,6 +1845,22 @@ export type Database = {
           gift_id: string
           service_cents: number
           shares: number
+          total_cents: number
+        }[]
+      }
+      public_order_receipt: {
+        Args: { p_order_id: string; p_slug: string }
+        Returns: {
+          bride_name: string
+          cart_items: number
+          created_at: string
+          gift_name: string
+          groom_name: string
+          id: string
+          installments: number
+          paid_at: string
+          payment_method: string
+          status: string
           total_cents: number
         }[]
       }

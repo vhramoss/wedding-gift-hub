@@ -30,7 +30,7 @@ function PrivacyPage() {
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
         <h1 className="font-display text-3xl sm:text-4xl">Política de privacidade</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Última atualização: setembro de 2026.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Última atualização: novembro de 2026.</p>
         <div className="divider-gold my-8 w-40" />
 
         <div className="space-y-8 text-sm leading-relaxed text-muted-foreground sm:text-base">
@@ -119,10 +119,10 @@ function PrivacyPage() {
           <section className="space-y-2">
             <h2 className="font-display text-xl text-foreground sm:text-2xl">7. Segurança</h2>
             <p>
-              Os acessos são protegidos por senha, as páginas do casamento só ficam visíveis para
-              pessoas autenticadas e as fotos ficam em armazenamento privado com links temporários.
-              O banco de dados aplica regras de acesso por perfil (noivos, convidado e
-              administrador).
+              As páginas publicadas do casamento podem ser acessadas sem conta. A confirmação de
+              presença exige uma conta vinculada ao convite individual. Informações internas e
+              dados de convidados têm acesso restrito; fotos enviadas ficam em armazenamento privado
+              com links temporários. Conteúdos publicados pelos noivos podem ser vistos pelos visitantes.
             </p>
           </section>
 

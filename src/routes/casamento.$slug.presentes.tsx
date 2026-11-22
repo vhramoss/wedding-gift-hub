@@ -14,6 +14,8 @@ import { giftQuoteKey, useGiftQuotes } from "@/hooks/useGiftQuotes";
 import { useCart } from "@/lib/cart";
 import { toast } from "sonner";
 import { isGiftAvailable } from "@/lib/guest-display";
+import { completeQuoteTotal } from "@/lib/gift-quote-rules";
+import { getMercadoPagoConfig } from "@/lib/mercadopago.functions";
 
 export const Route = createFileRoute("/casamento/$slug/presentes")({
   head: () => ({
@@ -42,10 +44,11 @@ function GiftsPage() {
     queryKey: ["gifts", wedding?.id],
     enabled: Boolean(wedding?.id),
     queryFn: async () => {
+      if (!wedding?.id) return [];
       const { data, error } = await supabase
         .from("gifts")
         .select("*")
-        .eq("wedding_id", wedding!.id)
+        .eq("wedding_id", wedding.id)
         .eq("active", true)
         .order("price_cents", { ascending: true });
       if (error) throw error;
@@ -55,26 +58,23 @@ function GiftsPage() {
 
   const gifts = giftsQuery.data ?? [];
 
-  // Só presentes ainda disponíveis podem ser cotados (o servidor recusa cotar os esgotados)
   const availableGifts = gifts.filter(isGiftAvailable);
   const quotesQuery = useGiftQuotes(availableGifts.map((gift) => ({ giftId: gift.id, shares: 1 })));
   const quotes = quotesQuery.data;
   const cartQuotesQuery = useGiftQuotes(
     cart.items.map((item) => ({ giftId: item.giftId, shares: item.shares })),
   );
-  const cartQuotesReady =
-    cart.items.length > 0 &&
-    cart.items.every((item) => cartQuotesQuery.data?.has(giftQuoteKey(item.giftId, item.shares)));
-  const cartTotal = cart.items.reduce(
-    (sum, item) =>
-      sum + (cartQuotesQuery.data?.get(giftQuoteKey(item.giftId, item.shares))?.total_cents ?? 0),
-    0,
-  );
+  const cartTotal = completeQuoteTotal(cart.items, cartQuotesQuery.data);
+  const paymentQuery = useQuery({
+    queryKey: ["mp-config", wedding?.id ?? null],
+    enabled: Boolean(wedding?.id),
+    queryFn: () => getMercadoPagoConfig({ data: { weddingId: wedding?.id ?? undefined } }),
+  });
+  if (paymentQuery.data && !paymentQuery.data.enabled) {
+    return <div className="mx-auto max-w-2xl px-4 py-16 text-center"><h1 className="font-display text-3xl">Lista de presentes</h1><p className="mt-4 text-muted-foreground">Os noivos estão finalizando a configuração para receber presentes.</p></div>;
+  }
   const categories = ["todos", ...new Set(gifts.map((g) => g.category).filter(Boolean) as string[])];
-  // Mostra TODOS os presentes ativos; os já presenteados vão para o fim da lista
-  const visible = (category === "todos" ? gifts : gifts.filter((g) => g.category === category))
-    .slice()
-    .sort((a, b) => Number(!isGiftAvailable(a)) - Number(!isGiftAvailable(b)));
+  const visible = category === "todos" ? availableGifts : availableGifts.filter((g) => g.category === category);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
@@ -90,7 +90,7 @@ function GiftsPage() {
           <p className="text-sm">
             <ShoppingBag className="mr-2 inline size-4 text-accent" />
             {cart.count} presente{cart.count > 1 ? "s" : ""} no carrinho ·{" "}
-            <strong>{cartQuotesReady ? formatBRL(cartTotal) : "…"}</strong>
+            <strong>{cartTotal === null ? "Calculando…" : formatBRL(cartTotal)}</strong>
           </p>
           <Button asChild size="sm">
             <Link to="/casamento/$slug/carrinho" params={{ slug }}>
@@ -133,14 +133,13 @@ function GiftsPage() {
           {visible.map((gift) => {
             const sharesTotal = Math.max(1, gift.shares_total ?? 1);
             const sharesLeft = Math.max(0, sharesTotal - gift.purchased_count);
-            // Preço final (com comissão) vem só da cotação; sem fallback para o valor dos noivos
-            const displayedPrice = quotes?.get(giftQuoteKey(gift.id, 1))?.total_cents ?? null;
-            const soldOut = !isGiftAvailable(gift);
+            const displayedPrice = quotes?.get(giftQuoteKey(gift.id, 1))?.total_cents;
+            const soldOut =
+              sharesTotal > 1
+                ? sharesLeft === 0
+                : gift.quantity > 0 && gift.purchased_count >= gift.quantity;
             return (
-              <Card
-                key={gift.id}
-                className={`shadow-card overflow-hidden border-border/70 pt-0 ${soldOut ? "opacity-70" : ""}`}
-              >
+              <Card key={gift.id} className="shadow-card overflow-hidden border-border/70 pt-0">
                 <div className="h-48 w-full bg-secondary/60">
                   {gift.image_url ? (
                     <img
@@ -165,18 +164,15 @@ function GiftsPage() {
                   {gift.description ? (
                     <p className="text-sm text-muted-foreground">{gift.description}</p>
                   ) : null}
-                  {soldOut ? null : displayedPrice !== null ? (
-                    <p className="mt-1 font-sans font-semibold text-3xl text-primary">
-                      {formatBRL(displayedPrice)}
-                    </p>
-                  ) : (
-                    <Skeleton className="mt-1 h-9 w-32" />
-                  )}
+                  <p className="mt-1 font-sans font-semibold text-3xl text-primary">
+                    {displayedPrice === undefined ? <Skeleton className="h-9 w-32" /> : formatBRL(displayedPrice)}
+                  </p>
                   {sharesTotal > 1 ? (
                     <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground">
-                          Por cota · {sharesTotal - sharesLeft} de {sharesTotal} cotas presenteadas
-                        </p>
+                      <p className="text-xs text-muted-foreground">
+                        Por cota ·{" "}
+                        {sharesTotal - sharesLeft} de {sharesTotal} cotas presenteadas
+                      </p>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
                         <div
                           className="h-full rounded-full bg-accent"
@@ -190,13 +186,14 @@ function GiftsPage() {
                   <div className="mt-2 flex flex-col gap-2">
                   <Button
                     variant="outline"
-                    disabled={soldOut || displayedPrice === null || cart.has(gift.id)}
+                    disabled={soldOut || !paymentQuery.data?.enabled || displayedPrice === undefined || cart.has(gift.id)}
                     onClick={() => {
+                      if (displayedPrice === undefined) return;
                       cart.add({
                         giftId: gift.id,
                         name: gift.name,
                         imageUrl: gift.image_url,
-                        unitCents: displayedPrice ?? 0,
+                        unitCents: displayedPrice,
                         shares: 1,
                         maxShares: sharesTotal > 1 ? sharesLeft : 1,
                         isShared: sharesTotal > 1,
@@ -214,11 +211,11 @@ function GiftsPage() {
                       </>
                     )}
                   </Button>
-                  <Button asChild disabled={soldOut}>
+                  <Button asChild disabled={soldOut || !paymentQuery.data?.enabled || displayedPrice === undefined}>
                     <Link
                       to="/casamento/$slug/presente/$giftId"
                       params={{ slug, giftId: gift.id }}
-                      disabled={soldOut}
+                      disabled={soldOut || !paymentQuery.data?.enabled || displayedPrice === undefined}
                     >
                       {soldOut
                         ? "Já presenteado"

@@ -38,16 +38,12 @@ function ThankYouPage() {
   const { pedido } = Route.useSearch();
 
   const orderQuery = useQuery({
-    queryKey: ["order-receipt", pedido],
+    queryKey: ["order-receipt", slug, pedido],
     enabled: Boolean(pedido),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*, gifts(name), weddings(bride_name, groom_name)")
-        .eq("id", pedido)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("public_order_receipt", { p_order_id: pedido, p_slug: slug });
       if (error) throw error;
-      return data;
+      return data?.[0] ?? null;
     },
   });
 
@@ -60,7 +56,7 @@ function ThankYouPage() {
         <h1 className="mt-4 font-display text-3xl sm:text-4xl">Obrigado pelo presente!</h1>
         <div className="divider-gold mx-auto my-6 w-32" />
         <p className="text-muted-foreground">
-          Os noivos já foram avisados e vão receber seu carinho com muita alegria.
+          {order?.status === "paid" ? "Seu pagamento foi confirmado. Obrigado pelo carinho!" : "Confira abaixo a situação do seu pagamento."}
         </p>
       </div>
 
@@ -78,11 +74,10 @@ function ThankYouPage() {
             </p>
           ) : (
             <>
-              <Row label="Presente" value={order.gifts?.name ?? "Presente"} />
-              {order.shares > 1 ? <Row label="Cotas" value={`${order.shares} cota(s)`} /> : null}
+              <Row label="Presente" value={order.cart_items > 1 ? `${order.cart_items} presentes` : order.gift_name ?? "Presente"} />
               <Row
                 label="Casal"
-                value={`${order.weddings?.bride_name ?? ""} & ${order.weddings?.groom_name ?? ""}`}
+                value={`${order.bride_name} & ${order.groom_name}`}
               />
               <Row
                 label="Forma de pagamento"
@@ -105,7 +100,6 @@ function ThankYouPage() {
                 label="Data"
                 value={new Date(order.paid_at ?? order.created_at).toLocaleString("pt-BR")}
               />
-              {order.message ? <Row label="Seu recado" value={order.message} /> : null}
               <Separator />
               <p className="text-xs text-muted-foreground">Pedido {order.id}</p>
             </>

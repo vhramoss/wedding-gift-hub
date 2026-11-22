@@ -30,7 +30,7 @@ function TermsPage() {
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
         <h1 className="font-display text-3xl sm:text-4xl">Termos de uso</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Última atualização: setembro de 2026.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Última atualização: novembro de 2026.</p>
         <div className="divider-gold my-8 w-40" />
 
         <div className="space-y-8 text-sm leading-relaxed text-muted-foreground sm:text-base">
@@ -77,8 +77,8 @@ function TermsPage() {
               O valor de cada presente é definido pelos noivos. Sobre cada presente pago incide a
               comissão da plataforma, informada ao casal antes da publicação do site. Quando a conta
               de recebimento dos noivos está conectada, o valor líquido é depositado diretamente na
-              conta deles e a comissão na conta da plataforma, no momento da liquidação. Sem essa
-              conexão, o repasse é feito manualmente pela plataforma.
+              conta deles e a comissão na conta da plataforma, no momento da liquidação. A conexão
+              da conta de recebimento é obrigatória para receber novos presentes.
             </p>
             <p>
               Prazos de liberação, antecipação e taxas de parcelamento seguem as regras do
@@ -134,8 +134,8 @@ function TermsPage() {
             <p>
               Essas são as taxas padrão. Condições especiais podem ser combinadas individualmente e
               ficam registradas na aba “Taxas” do painel dos noivos, que sempre mostra as taxas
-              vigentes para o casamento. Dependendo do combinado, a taxa é descontada do valor
-              recebido pelos noivos ou somada ao valor pago pelo convidado. Juros de parcelamento no
+              vigentes para o casamento. A comissão da plataforma é paga pelo convidado, incluída no
+              preço final, sem descontá-la do valor-base do presente destinado aos noivos. Juros de parcelamento no
               cartão de crédito são pagos pelo convidado. Ao criar o site, os noivos declaram
               concordar com estas taxas.
             </p>

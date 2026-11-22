@@ -101,7 +101,7 @@ export function GiftPresets({ weddingId }: { weddingId: string }) {
         description: preset.description,
         category: "Brincadeiras",
         price_cents: preset.priceCents,
-        quantity: 1,
+        quantity: 0,
         shares_total: 1,
       });
       if (error) throw error;

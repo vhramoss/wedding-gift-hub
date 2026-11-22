@@ -9,3 +9,7 @@ test('permite cadastrar vários dependentes por linhas ou separadores', () => {
   expect(parseDependentNames('Ana\nPedro\nLia')).toEqual(['Ana', 'Pedro', 'Lia']);
   expect(parseDependentNames('Ana, Pedro; Lia | Ana')).toEqual(['Ana', 'Pedro', 'Lia']);
 });
+test('presentes ilimitados continuam disponíveis após compras, mas cotas têm limite', () => {
+  expect(isGiftAvailable({ shares_total: 1, quantity: 0, purchased_count: 200 })).toBe(true);
+  expect(isGiftAvailable({ shares_total: 5, quantity: 0, purchased_count: 5 })).toBe(false);
+});

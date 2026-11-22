@@ -1,5 +1,12 @@
 # Roadmap
 
+## Pedido 22/11 — entrada dos convidados e revisão completa
+- [x] Organizar a aba Convidados: seções Lista/Convites/Perfis/Acessos; seleção de convite individual no topo, lista em páginas de 20, configuração e lembretes recolhidos; verificado como gestor em computador e celular sem transbordamento.
+- [x] Login: direcionar ao casamento vinculado pelo convite, mesmo sem presença ou presente anterior; preservar destinos internos de convites. RPC autenticada my_invited_weddings e testes de destino seguro.
+- [x] Primeiro acesso: permitir visitar o casamento e confirmar presença depois, sem registrar resposta automaticamente. Conta temporária resgatou convite, visitou site e retornou via /auth; attending e responded_at continuaram nulos.
+- [ ] Auditar proteções já aplicadas e concluir validações pendentes de pagamento, assinatura e acesso; registrar separadamente dependências externas.
+- [ ] Atualizar a instalação GitHub/Vercel e validar o fluxo convidado real de teste; não afirmar conclusão de itens não exercitados.
+
 - [x] Ativar pagamento real (Mercado Pago) com o dono do site como intermediador de todos os presentes
 - [x] Pix e cartões (débito à vista e crédito em até 12x) passam 100% pelo dono do site
 - [x] Pedido criado no servidor com preço vindo do banco (navegador não envia valores)
@@ -85,3 +92,47 @@
 
 ## Pedido 24/10
 - [x] Primeiro login do convidado: exigir só um entre telefone, CPF ou e-mail
+
+- [ ] Login dando "failed to fetch" (01/11) — investigar
+
+## Revisão de segurança e operação — 13/11
+- [x] Conferir a avaliação contra o código e as permissões atuais: exposição de campos internos, presença sem vínculo, recibo com leitura direta, idempotência aleatória e fallback financeiro confirmados.
+- [ ] P0: separar dados públicos e privados; fechar confirmação/busca e vinculação de convidados; recibo público sem dados pessoais; idempotência por pedido e reutilização de Pix.
+- [ ] P1: presentes ilimitados configuráveis, mantendo cotas limitadas; exigir MP conectado; operações financeiras somente no servidor; rotação coordenada do segredo; criptografia de tokens; assinatura e valor do webhook.
+- [ ] Alinhar quem paga as taxas entre banco, cadastro, termos e PDF, preservando faixas e decisões existentes até confirmação.
+- [ ] P2: documentação de publicação, proteção de arquivos de ambiente, testes de pedidos, expiração segura de pendências, monitoramento e retenção de dados.
+- [ ] P3: checklist de lançamento, organização do painel, aprovação e alertas de operação; validar com casais.
+- [ ] Verificar backup/exportação atual antes de mudanças sensíveis — inventário disponível apenas na interface de Backups.
+- [x] Presença: RPC exige conta e vínculo, busca pública revogada, vínculo antigo por CPF bloqueado; busca removida da página. Permissões verificadas no banco e tela sem login verificada sem campos de pesquisa.
+- [x] Recibo: consulta mínima por código e casamento, sem dados pessoais; tela não afirma pagamento antes da confirmação. Tela de pedido inexistente verificada sem login; ainda não há pedido pago de visitante disponível para testar recibo real.
+- [x] Pix/cartão: chave estável por order.id; Pix pendente reaproveitado. Testes de regras aprovados; concorrência real no provedor não exercitada.
+- [x] Modelos de brincadeira usam quantidade ilimitada (zero), banco permite explicitamente; presentes existentes e cotas mantêm limites. Regra testada.
+- [x] Webhook: conferência de valor, moeda BRL e casamento antes de confirmar. Assinatura do provedor ainda depende de configurar seu segredo.
+- [x] Comando de testes e documentação corrigidos: seis testes aprovados, prévia sem erros. Target Vercel externo não verificado.
+- [ ] Bloqueadores: confirmar exportação recente para separação dos dados; coordenar segredos e publicação Vercel; definir pagador de taxas e prazos LGPD; configuração de monitoramento/assinatura; validação com conta convidada e casais.
+- [ ] Arquivos de ambiente: proteção é gerenciada pela plataforma, edição do arquivo de exclusões recusada; responsável pelo repositório deve revisar rastreamento/histórico sem publicar credenciais.
+- [x] Validação autenticada: conta do solicitante sem convite vinculado recebeu aviso de bloqueio e nenhum botão para enviar resposta; verificado na prévia. Fluxo positivo com convidado vinculado ainda precisa de conta/convite de teste, sem consumir convites reais.
+- [ ] Próxima etapa aguardando confirmação de exportação recente; pagador já confirmado como convidado. Dados internos ainda não separados e operações financeiras ainda não revogadas, para não interromper a instalação Vercel sem coordenação.
+- [x] Pagador confirmado: convidado. Padrão do banco alterado para guest e configurações existentes alinhadas sem recalcular pedidos antigos; termos atualizados. Lista aguarda o preço calculado antes de mostrar valor ou habilitar compra, evitando piscar o preço sem comissão.
+- [ ] Cópia de segurança explicada: exportar os dados atuais na área Database → Manage → Settings → Export project data; não inclui fotos. Confirmação ainda pendente antes da separação de dados privados.
+
+## Entrega 16/11 — projeto e resumo
+- [x] Conferir o andamento e executar os testes: seis aprovados, 16 verificações.
+- [x] Preparar entrega do ZIP do código atual e resumo de alterações, funcionamento, validações e pendências; arquivos inspecionados sem segredos, dependências, metadados ou saídas de compilação. O ZIP não substitui a cópia dos dados e fotos do casamento.
+
+## Continuação 17/11 — concluir antes de nova entrega
+- [x] Criar projeção pública explícita e cópia privada sincronizada; bloquear leitura das colunas antigas para visitantes e contas sem gestão. Validar permissões e telas antes de considerar toda a etapa P0 concluída.
+- [ ] Completar preço final no detalhe e carrinho e impedir cobrança sem conta de recebimento conectada.
+- [ ] Concluir as demais pendências financeiras, operacionais e de painel listadas acima; registrar bloqueadores externos sem declarar conclusão total.
+- [ ] Gerar novo ZIP e resumo somente depois da conclusão e validação.
+- [ ] Vercel confirmada ativa: coordenar atualização do código antes da troca de segredos; código antigo pode deixar de ler casamentos ou executar operações financeiras após as novas restrições. Não reabrir permissões inseguras para manter versões antigas.
+- [x] Pedido 22/11: restaurar acesso ao link do casamento para visitantes sem login e convidados comuns, sem expor novamente dados internos; versão Vercel publicada e verificada.
+- Endereço afetado confirmado: https://wedding-gift-hub.vercel.app/casamento/pedro-e-beatriz; comparar a versão externa sem transferir sessões ou credenciais para essa origem.
+- [x] Diagnóstico 22/11: Vercel mostrou “Site não encontrado” e consultou weddings; o código atual consulta wedding_public. Na versão atual, visitante sem login e conta de teste com papel guest abriram o casamento em 390px e 1280px, sem acesso aos campos privados.
+- [x] Restaurar o endereço Vercel: correção enviada ao GitHub e publicação concluída; acesso público e convidado confirmado sem reabrir a leitura de weddings.
+- [x] Pedido 22/11 às 04:15 UTC: repetir teste do endereço Vercel sem login; ainda mostra “Site não encontrado” e consulta weddings. A versão corrigida abre Pedro & Beatriz usando wedding_public.
+- [x] Implantar correção de acesso na Vercel e validar visitantes e convidados: concluído pelo GitHub autorizado; verificação no endereço publicado em celular e computador.
+- [x] Repositório Vercel identificado pelo usuário: vhramoss/wedding-gift-hub, branch master; conexão GitHub autorizada nesta conversa e permissão de escrita verificada. A última versão ainda lê weddings publicamente.
+- [x] Enviar correção das leituras públicas pelo GitHub e acompanhar a publicação automática; testar o endereço publicado sem login e com conta convidada de teste, sem usar contas ou convites reais.
+- [x] Autorização 22/11 às 04:20 UTC: atualizar vhramoss/wedding-gift-hub para restaurar o acesso na Vercel. Commit 849d64cc42047b2a9038e7d0c0fef1696c1bf717 aplicado em master sem reescrever histórico; correção restrita às leituras públicas e tipos compatíveis, preservando configuração e demais arquivos da instalação externa.
+- [x] Vercel confirmou publicação concluída às 04:23:20 UTC. Link https://wedding-gift-hub.vercel.app/casamento/pedro-e-beatriz abriu para visitante e conta temporária com papel guest, em 1280px e 390px; sessão autenticada confirmada na consulta wedding_public. Capturas mostram casamento e botão Sair para convidado. Sete testes locais aprovados; essa publicação não inclui todas as outras pendências da revisão financeira e operacional.

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BRAND } from "@/lib/brand";
+import { loginDestination } from "@/lib/login-destination";
 
 const searchSchema = z.object({
   redirect: z.string().optional(),
@@ -26,6 +27,8 @@ export const Route = createFileRoute("/auth")({
           "Acesse com e-mail e senha para confirmar presença e escolher o presente dos noivos.",
       },
       { property: "og:title", content: `Entrar · ${BRAND.name}` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       {
         property: "og:description",
         content: "Login de convidados e noivos. Novas contas somente por convite.",
@@ -35,37 +38,35 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-function safePath(value: string | undefined): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
-  return value;
-}
-
 function AuthPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/auth" });
-  const target = safePath(search.redirect);
+  async function goAfterLogin() {
+    const { data, error } = await supabase.rpc("my_invited_weddings");
+    if (error) throw error;
+    await navigate({ to: loginDestination(search.redirect, data?.[0]?.slug), replace: true });
+  }
 
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: target, replace: true });
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) goAfterLogin().catch((e: Error) => toast.error("Não foi possível abrir seu casamento", { description: e.message }));
     });
-  }, [navigate, target]);
+  }, [navigate, search.redirect]);
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    setLoading(false);
-    if (error) {
-      toast.error("Não foi possível entrar", { description: error.message });
-      return;
-    }
-    toast.success("Bem-vindo de volta!");
-    navigate({ to: target, replace: true });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) throw error;
+      await goAfterLogin();
+    } catch (e) {
+      toast.error("Não foi possível entrar", { description: (e as Error).message });
+    } finally { setLoading(false); }
   }
 
   return (

@@ -3,6 +3,7 @@ import { getRequest } from "@tanstack/react-start/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { paidAmountMatches, paymentIdempotencyKey, reusablePix } from "@/lib/payment-rules";
 
 /**
  * Cliente do banco para o visitante atual: usa o login quando existe, senão
@@ -51,7 +52,7 @@ async function currentClient() {
  *    token DOS NOIVOS e `application_fee` = comissão da plataforma. O Mercado
  *    Pago divide na liquidação: líquido -> conta dos noivos, comissão -> conta
  *    da plataforma. O dinheiro dos noivos nunca entra no caixa da plataforma.
- *  - Sem conta conectada, cai no modo antigo (tudo na conta da plataforma).
+ *  - Sem conta conectada, não há cobrança.
  *
  * Regras de segurança:
  *  - O navegador NUNCA envia valores. Só giftId, método, parcelas e recado.
@@ -63,6 +64,8 @@ type MpPaymentResponse = {
   id?: number;
   status?: string;
   status_detail?: string;
+  transaction_amount?: number;
+  currency_id?: string;
   point_of_interaction?: {
     transaction_data?: {
       qr_code?: string;
@@ -98,8 +101,9 @@ function webhookUrl(weddingId?: string): string {
 async function mpCreatePayment(
   body: Record<string, unknown>,
   accessToken: string,
+  orderId: string,
 ): Promise<MpPaymentResponse> {
-  const idempotency = crypto.randomUUID();
+  const idempotency = paymentIdempotencyKey(orderId);
   const res = await fetch("https://api.mercadopago.com/v1/payments", {
     method: "POST",
     headers: {
@@ -125,7 +129,7 @@ async function mpCreatePayment(
 
 /**
  * Resolve qual conta recebe o pagamento.
- * Retorna o token da conta dos noivos (split) ou o da plataforma (fallback).
+ * Retorna somente o token da conta dos noivos; nunca redireciona recebimentos.
  */
 async function resolveCollector(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -138,20 +142,15 @@ async function resolveCollector(
   applicationFeeCents: number;
   sellerMpUserId: number | null;
 }> {
-  const platform = {
-    accessToken: process.env["MERCADOPAGO_ACCESS_TOKEN"]!,
-    split: false,
-    applicationFeeCents: 0,
-    sellerMpUserId: null as number | null,
-  };
   const secret = process.env["ORDER_CONFIRM_SECRET"];
-  if (!secret) return platform;
+  if (!secret) throw new Error("Recebimento temporariamente indisponível.");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  const { data: rows, error } = await supabase.rpc("get_wedding_mp_credentials", {
+  const { data: rows, error } = await supabaseAdmin.rpc("get_wedding_mp_credentials", {
     p_wedding_id: weddingId,
     p_secret: secret,
   });
-  if (error) return platform;
+  if (error) throw new Error("Não foi possível verificar a conta de recebimento.");
   const cred = (rows ?? [])[0] as
     | {
         mp_user_id: number | null;
@@ -160,7 +159,7 @@ async function resolveCollector(
         expires_at: string | null;
       }
     | undefined;
-  if (!cred?.access_token) return platform;
+  if (!cred?.access_token) throw new Error("Os noivos precisam conectar a conta de recebimento.");
 
   let accessToken = cred.access_token;
 
@@ -170,11 +169,12 @@ async function resolveCollector(
     try {
       const { refreshSellerToken } = await import("@/lib/mp-oauth.server");
       const fresh = await refreshSellerToken(cred.refresh_token);
-      accessToken = fresh.access_token!;
-      await supabase.rpc("save_wedding_mp_account", {
+      if (!fresh.access_token) throw new Error("Renovação de recebimento indisponível.");
+      accessToken = fresh.access_token;
+      const { error: saveError } = await supabaseAdmin.rpc("save_wedding_mp_account", {
         p_wedding_id: weddingId,
         p_mp_user_id: (fresh.user_id ?? cred.mp_user_id ?? null) as number,
-        p_access_token: fresh.access_token!,
+        p_access_token: fresh.access_token,
         p_refresh_token: fresh.refresh_token ?? "",
         p_public_key: fresh.public_key ?? "",
         p_expires_at: (fresh.expires_in
@@ -184,8 +184,9 @@ async function resolveCollector(
         p_connected_by: null as unknown as string,
         p_secret: secret,
       });
+      if (saveError) throw saveError;
     } catch {
-      // segue com o token atual; se falhar, o MP devolverá erro claro
+      throw new Error("Os noivos precisam reconectar a conta de recebimento.");
     }
   }
 
@@ -209,8 +210,9 @@ async function recordSplit(
 ) {
   const secret = process.env["ORDER_CONFIRM_SECRET"];
   if (!secret) return;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   try {
-    await supabase.rpc("record_order_split", {
+    await supabaseAdmin.rpc("record_order_split", {
       p_order_id: orderId,
       p_application_fee_cents: applicationFeeCents,
       p_seller_mp_user_id: sellerMpUserId as number,
@@ -267,7 +269,7 @@ export const getMercadoPagoConfig = createServerFn({ method: "POST" })
       }
     }
 
-    return { enabled: enabled(), publicKey, split };
+    return { enabled: enabled() && split, publicKey: split ? publicKey : "", split };
   });
 
 /**
@@ -397,6 +399,8 @@ type PublicOrder = {
   cart_total_cents: number | null;
   cart_commission_cents: number | null;
   cart_items: number | null;
+  pix_payload: string | null;
+  pix_qr_base64: string | null;
 };
 
 /** Valor e comissão cobrados: soma do carrinho quando houver. */
@@ -418,7 +422,8 @@ async function loadOrder(
   orderId: string,
   userId: string | null,
 ): Promise<PublicOrder> {
-  const { data, error } = await supabase.rpc("public_order_status", {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin.rpc("public_order_status", {
     p_order_id: orderId,
   });
   if (error) throw error;
@@ -451,6 +456,8 @@ export const createPixPayment = createServerFn({ method: "POST" })
     if (order.status !== "pending") throw new Error("Pedido não está pendente.");
 
     const totals = chargeTotals(order);
+    const existingPix = reusablePix(order);
+    if (existingPix) return { paymentId: undefined, ...existingPix, totalCents: totals.totalCents };
     const collector = await resolveCollector(
       supabase,
       order.wedding_id,
@@ -476,21 +483,19 @@ export const createPixPayment = createServerFn({ method: "POST" })
           : {}),
       },
       collector.accessToken,
+      order.id,
     );
 
     const qrCode = payment.point_of_interaction?.transaction_data?.qr_code ?? "";
     const qrCodeBase64 =
       payment.point_of_interaction?.transaction_data?.qr_code_base64 ?? "";
 
-    const { error: rpcError } = await supabase.rpc(
-      userId ? "record_pix_payment" : "record_public_pix_payment",
-      {
-        p_order_id: order.id,
-        p_mp_payment_id: (payment.id ?? null) as number,
-        p_payload: qrCode,
-        p_qr_base64: qrCodeBase64,
-      },
-    );
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const update = supabaseAdmin.from("orders").update({
+      mp_payment_id: payment.id ?? null, provider: "mercadopago",
+      pix_payload: qrCode, pix_qr_base64: qrCodeBase64,
+    }).eq("status", "pending").eq("payment_method", "pix");
+    const { error: rpcError } = await (order.cart_id ? update.eq("cart_id", order.cart_id) : update.eq("id", order.id));
     if (rpcError) throw rpcError;
 
     if (collector.split) {
@@ -566,6 +571,7 @@ export const processCardPayment = createServerFn({ method: "POST" })
           : {}),
       },
       collector.accessToken,
+      order.id,
     );
 
     if (collector.split) {
@@ -587,9 +593,13 @@ export const processCardPayment = createServerFn({ method: "POST" })
     // Confirma no banco via função protegida por segredo (mesmo segredo do webhook).
     // Best-effort: se o segredo ainda não foi configurado, o webhook fará a confirmação.
     const secret = process.env["ORDER_CONFIRM_SECRET"];
+    if (payment.status === "approved" && !paidAmountMatches(totals.totalCents, payment.transaction_amount ?? NaN, payment.currency_id ?? "")) {
+      throw new Error("O valor confirmado pelo pagamento não corresponde ao pedido.");
+    }
     if (secret) {
       try {
-        await supabase.rpc("confirm_order_payment", {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.rpc("confirm_order_payment", {
           p_order_id: order.id,
           p_mp_payment_id: (payment.id ?? null) as number,
           p_status: payment.status ?? "",

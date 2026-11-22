@@ -1,0 +1,3 @@
+CREATE OR REPLACE FUNCTION public.require_wedding_payment_account() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ BEGIN IF NOT EXISTS (SELECT 1 FROM public.wedding_payment_accounts WHERE wedding_id=NEW.wedding_id AND access_token IS NOT NULL AND access_token<>'') THEN RAISE EXCEPTION 'Os noivos precisam conectar a conta de recebimento antes de receber presentes.'; END IF; RETURN NEW; END $$;
+REVOKE ALL ON FUNCTION public.require_wedding_payment_account() FROM PUBLIC,anon,authenticated;
+CREATE TRIGGER orders_require_connected_payment BEFORE INSERT ON public.orders FOR EACH ROW EXECUTE FUNCTION public.require_wedding_payment_account();

@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { paidAmountMatches } from "@/lib/payment-rules";
+import { validMercadoPagoSignature } from "@/lib/webhook-signature";
 
 /**
  * Webhook do Mercado Pago (IPN / Webhooks API).
@@ -91,20 +93,26 @@ async function handle(request: Request): Promise<Response> {
     paymentId = url.searchParams.get("data.id") || url.searchParams.get("id");
   }
 
-  if (!paymentId || paymentId === "null") {
+  if (!paymentId || !/^\d+$/.test(paymentId)) {
     return new Response("ok", { status: 200 });
+  }
+
+  const signatureSecret = process.env["MERCADOPAGO_WEBHOOK_SECRET"];
+  if (!signatureSecret) return new Response("Assinatura do provedor não configurada", { status: 503 });
+  if (!(await validMercadoPagoSignature(signatureSecret, request.headers.get("x-signature"), request.headers.get("x-request-id"), new URL(request.url).searchParams.get("data.id") ?? paymentId))) {
+    return new Response("Assinatura inválida", { status: 401 });
   }
 
   // Buscar o pagamento na API do Mercado Pago para confirmar o status real.
   // Em pagamentos com split, a consulta usa o token da conta dos noivos
   // (o id do casamento vem na query `w` da URL de notificação).
-  let payment: { status?: string; external_reference?: string } | null = null;
+  let payment: { status?: string; external_reference?: string; transaction_amount?: number; currency_id?: string } | null = null;
   const weddingId = new URL(request.url).searchParams.get("w");
 
   const tokens: string[] = [];
   if (weddingId && confirmSecret) {
     try {
-      const supabase = makePublishableClient();
+      const { supabaseAdmin: supabase } = await import("@/integrations/supabase/client.server");
       const { data: rows } = await supabase.rpc("get_wedding_mp_credentials", {
         p_wedding_id: weddingId,
         p_secret: confirmSecret,
@@ -152,9 +160,17 @@ async function handle(request: Request): Promise<Response> {
   }
 
   try {
-    const supabase = makePublishableClient();
+    const { supabaseAdmin: supabase } = await import("@/integrations/supabase/client.server");
+    const { data: orderRows, error: orderError } = await supabase.rpc("public_order_status", { p_order_id: orderId });
+    const order = orderRows?.[0];
+    if (orderError || !order) return new Response("Pedido não encontrado", { status: 503 });
+    if (weddingId && order.wedding_id !== weddingId) return new Response("Casamento divergente", { status: 409 });
+    if (isPaid && !paidAmountMatches(order.cart_total_cents ?? order.total_cents, payment.transaction_amount ?? NaN, payment.currency_id ?? "")) {
+      return new Response("Valor ou moeda divergente", { status: 409 });
+    }
     const mpId = Number(paymentId);
-    const { error } = await supabase.rpc("confirm_order_payment", {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.rpc("confirm_order_payment", {
       p_order_id: orderId,
       p_mp_payment_id: (Number.isFinite(mpId) ? mpId : null) as number,
       p_status: status,

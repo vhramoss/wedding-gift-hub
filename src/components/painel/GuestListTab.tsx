@@ -116,8 +116,7 @@ function RsvpHowItWorks() {
           </div>
         ))}
         <p className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
-          O convidado escaneia o código, cria o perfil uma única vez com nome e CPF e já confirma a
-          presença na mesma tela — depois, tudo dele fica na área do seu casamento.
+          O convidado abre o convite individual, cria a conta com e-mail e escolhe confirmar agora ou depois. O nome já vem da sua lista.
         </p>
       </CardContent>
     </Card>
@@ -179,10 +178,12 @@ function GuestNameEditor({ guestId, name }: { guestId: string; name: string }) {
   );
 }
 
-export function GuestListTab({ weddingId }: { weddingId: string | null }) {
+export function GuestListTab({ weddingId, mode = "list" }: { weddingId: string | null; mode?: "list" | "invites" }) {
   const queryClient = useQueryClient();
   const [raw, setRaw] = useState("");
   const [filter, setFilter] = useState("");
+  const [page, setPage] = useState(0);
+  const [selectedGuest, setSelectedGuest] = useState("");
 
   const guestsQuery = useQuery({
     queryKey: ["panel", "guests", weddingId],
@@ -219,6 +220,9 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
     if (!q) return guests;
     return guests.filter((g) => g.name.toLowerCase().includes(q));
   }, [guests, filter]);
+  const pageCount = Math.max(1, Math.ceil(shown.length / 20));
+  const currentPage = Math.min(page, pageCount - 1);
+  const visibleGuests = shown.slice(currentPage * 20, (currentPage + 1) * 20);
 
   const importList = useMutation({
     mutationFn: async () => {
@@ -337,19 +341,28 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
 
   return (
     <div className="space-y-6">
-      <RsvpHowItWorks />
-      <GuestPasswordCard weddingId={weddingId} />
-      <div className="flex justify-end">
+      {mode === "invites" ? <>
+      <div className="flex flex-wrap items-center gap-3">
+        <Input aria-label="Buscar convidado para convite" placeholder="Buscar convidado" value={filter} onChange={(e) => setFilter(e.target.value)} />
+        <select aria-label="Escolher convidado" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={selectedGuest} onChange={(e) => setSelectedGuest(e.target.value)}>
+          <option value="">Selecione o convidado</option>
+          {shown.map((g) => <option key={g.id} value={g.id}>{g.name}{g.group_label ? ` · ${g.group_label}` : ""}</option>)}
+        </select>
+        {guests.filter((g) => g.id === selectedGuest).map((g) => <GuestQrButton key={g.id} weddingId={weddingId} guestId={g.id} guestName={g.name} invites={guestInvites} />)}
         <ExportGuestLinksButton weddingId={weddingId} guests={guests} />
       </div>
+      <GuestPasswordCard weddingId={weddingId} />
+      <details><summary className="cursor-pointer py-3 font-medium">Como funcionam os convites</summary><RsvpHowItWorks /></details>
+      </> : <>
+      <details>
+      <summary className="cursor-pointer py-3 font-medium">Adicionar convidados e exportar planilha</summary>
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-display text-2xl">
             <Users className="size-5 text-accent" /> Lista de convidados
           </CardTitle>
           <CardDescription>
-            Só quem estiver nesta lista consegue confirmar presença no site. O convidado procura o
-            próprio nome e responde — não precisa de conta.
+            A presença é respondida pela conta vinculada ao convite individual. O convidado pode deixar a resposta para depois.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -416,7 +429,10 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
           </div>
         </CardContent>
       </Card>
+      </details>
 
+      <details>
+      <summary className="cursor-pointer py-3 font-medium">Lembretes de WhatsApp</summary>
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 font-display text-2xl">
@@ -511,6 +527,7 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
           </div>
         </CardContent>
       </Card>
+      </details>
 
 
       <div className="space-y-2">
@@ -518,13 +535,20 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
         <Input
           id="guest-filter"
           value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+          onChange={(e) => { setFilter(e.target.value); setPage(0); }}
           placeholder="Digite um nome"
         />
       </div>
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span>{shown.length} convidado(s) · Página {currentPage + 1} de {pageCount}</span>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Anterior</Button>
+          <Button variant="outline" size="sm" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}>Próxima</Button>
+        </div>
+      </div>
 
       <div className="space-y-3">
-        {shown.map((g) => (
+        {visibleGuests.map((g) => (
           <Card key={g.id}>
             <CardContent className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -565,6 +589,7 @@ export function GuestListTab({ weddingId }: { weddingId: string | null }) {
           <p className="text-muted-foreground">A lista ainda está vazia.</p>
         ) : null}
       </div>
+      </>}
     </div>
   );
 }

@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Download, ExternalLink, Plus, Save, Trash2, Undo2 } from "lucide-react";
+import { Download, ExternalLink, Plus, Save, Trash2 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AnnouncementsTab } from "@/components/admin/AnnouncementsTab";
-import { InviteManager } from "@/components/InviteManager";
-import { CoOwnersCard } from "@/components/admin/CoOwnersCard";
+import { GuestsWorkspace } from "@/components/painel/GuestsWorkspace";
 import { VendorDirectory } from "@/components/VendorDirectory";
 import { AppearanceTab } from "@/components/admin/AppearanceTab";
 import { FinanceTab } from "@/components/admin/FinanceTab";
@@ -23,14 +23,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FeesTab } from "@/components/painel/FeesTab";
-import { GuestSignupsCard } from "@/components/painel/GuestSignupsCard";
 import { PlannerInviteCard } from "@/components/PlannerInviteCard";
 import { PaymentAccountTab } from "@/components/painel/PaymentAccountTab";
 import { PayoutSummary } from "@/components/painel/PayoutSummary";
 import { NotificationsTab } from "@/components/painel/NotificationsTab";
 import { RemindersTab } from "@/components/painel/RemindersTab";
-import { GuestListTab } from "@/components/painel/GuestListTab";
 import { GiftPresets } from "@/components/painel/GiftPresets";
+import { LaunchChecklist } from "@/components/painel/LaunchChecklist";
+import { MessageModeration } from "@/components/painel/MessageModeration";
 import { whatsappLink } from "@/lib/brand";
 import { downloadCsv } from "@/lib/csv";
 import { useSession } from "@/hooks/useSession";
@@ -50,6 +50,8 @@ export const Route = createFileRoute("/_authenticated/painel")({
           "Edite as páginas do seu site de casamento, envie fotos, monte a lista de presentes e acompanhe confirmações.",
       },
       { property: "og:title", content: "Área dos noivos" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         property: "og:description",
         content: "Personalize o site do casamento, fotos, presentes e confirmações.",
@@ -74,6 +76,8 @@ function toCents(value: string) {
 }
 
 function CouplePanel() {
+  const [section, setSection] = useState("site");
+  const [activeTab, setActiveTab] = useState("content");
   const { user } = useSession();
   const { isOwner, isSuperAdmin, isLoading: rolesLoading } = useMyRoles(user?.id);
   const queryClient = useQueryClient();
@@ -216,7 +220,7 @@ function CouplePanel() {
         category: String(form.get("category") ?? "").trim() || null,
         image_url: String(form.get("image") ?? "").trim() || null,
         price_cents: priceCents,
-        quantity: Math.max(1, Number(form.get("quantity") ?? 1)),
+        quantity: Math.max(0, Number(form.get("quantity") ?? 0)),
         shares_total: Math.max(1, Number(form.get("shares_total") ?? 1)),
       });
       if (error) throw error;
@@ -228,32 +232,15 @@ function CouplePanel() {
     onError: (e: Error) => toast.error("Erro ao adicionar", { description: e.message }),
   });
 
-  // Remove da lista (active=false) ou restaura (active=true) um presente
-  const toggleGift = useMutation({
-    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase.from("gifts").update({ active }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: (_data, vars) => {
-      toast.success(vars.active ? "Presente de volta à lista." : "Presente removido da lista.");
-      queryClient.invalidateQueries({ queryKey: ["panel", "gifts", weddingId] });
-    },
-    onError: (e: Error) => toast.error("Erro ao atualizar", { description: e.message }),
-  });
-
-  const updateOrder = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
-        .from("orders")
-        .update({ status, paid_at: status === "paid" ? new Date().toISOString() : null })
-        .eq("id", id);
+  const removeGift = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("gifts").update({ active: false }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["panel", "orders", weddingId] });
+      toast.success("Presente removido da lista.");
       queryClient.invalidateQueries({ queryKey: ["panel", "gifts", weddingId] });
     },
-    onError: (e: Error) => toast.error("Erro", { description: e.message }),
   });
 
   if (rolesLoading || weddingLoading) {
@@ -398,23 +385,40 @@ function CouplePanel() {
           </Card>
         ) : null}
 
-        <Tabs defaultValue="content" className="mt-8">
+        <LaunchChecklist weddingId={wedding.id} hasDetails={Boolean(wedding.wedding_date && wedding.bride_name && wedding.groom_name)} hasGifts={Boolean(giftsQuery.data?.some((gift) => gift.active))} approved={wedding.approval_status === "approved" && wedding.published} onSelect={(nextSection, tab) => { setSection(nextSection); setActiveTab(tab); }} />
+        <div className="mt-8 flex flex-wrap gap-2" aria-label="Seções do painel">
+          {[
+            { id: "site", label: "Nosso site", first: "content" },
+            { id: "guests", label: "Convidados", first: "rsvps" },
+            { id: "money", label: "Presentes e recebimento", first: "payments" },
+            { id: "account", label: "Conta e serviços", first: "vendors" },
+          ].map((item) => <Button key={item.id} variant={section === item.id ? "default" : "outline"} onClick={() => { setSection(item.id); setActiveTab(item.first); }}>{item.label}</Button>)}
+        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
           <TabsList className="h-auto flex-wrap justify-start gap-1 overflow-visible sm:h-9 sm:flex-nowrap sm:overflow-x-auto">
+            {section === "site" ? <>
             <TabsTrigger value="content">Nosso site</TabsTrigger>
             <TabsTrigger value="photos">Fotos</TabsTrigger>
             <TabsTrigger value="extras">Capa e música</TabsTrigger>
             <TabsTrigger value="announcements">Avisos</TabsTrigger>
+            <TabsTrigger value="appearance">Aparência</TabsTrigger>
+            </> : null}
+            {section === "guests" ? <>
             <TabsTrigger value="reminders">Save the date</TabsTrigger>
             <TabsTrigger value="notifications">Novidades</TabsTrigger>
+            <TabsTrigger value="rsvps">Convidados</TabsTrigger>
+            </> : null}
+            {section === "money" ? <>
+            <TabsTrigger value="payments">Recebimento</TabsTrigger>
             <TabsTrigger value="gifts">Presentes</TabsTrigger>
             <TabsTrigger value="orders">Pedidos</TabsTrigger>
-            <TabsTrigger value="rsvps">Convidados</TabsTrigger>
-            <TabsTrigger value="appearance">Aparência</TabsTrigger>
             <TabsTrigger value="finance">Financeiro</TabsTrigger>
-            <TabsTrigger value="payments">Recebimento</TabsTrigger>
             <TabsTrigger value="fees">Taxas</TabsTrigger>
+            </> : null}
+            {section === "account" ? <>
             <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
             {!asAdmin ? <TabsTrigger value="account">Minha conta</TabsTrigger> : null}
+            </> : null}
           </TabsList>
 
           <TabsContent value="content" className="mt-6">
@@ -435,6 +439,7 @@ function CouplePanel() {
 
           <TabsContent value="notifications" className="mt-6">
             <NotificationsTab weddingId={weddingId} />
+            {weddingId ? <MessageModeration weddingId={weddingId} /> : null}
           </TabsContent>
 
           <TabsContent value="gifts" className="mt-6 space-y-6">
@@ -468,8 +473,8 @@ function CouplePanel() {
                     <Input id="price" name="price" required placeholder="350,00" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="quantity">Quantidade</Label>
-                    <Input id="quantity" name="quantity" type="number" min={1} defaultValue={1} />
+                    <Label htmlFor="quantity">Quantidade (0 = ilimitado)</Label>
+                    <Input id="quantity" name="quantity" type="number" min={0} defaultValue={0} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="shares_total">Dividir em cotas</Label>
@@ -511,21 +516,18 @@ function CouplePanel() {
                       <h3 className="break-words text-lg">{gift.name}</h3>
                       <p className="text-sm text-muted-foreground">
                         {formatBRL(gift.price_cents)} · {gift.purchased_count}/
-                        {(gift.shares_total ?? 1) > 1 ? gift.shares_total : gift.quantity}{" "}
+                        {(gift.shares_total ?? 1) > 1 ? gift.shares_total : gift.quantity === 0 ? "ilimitado" : gift.quantity}{" "}
                         {(gift.shares_total ?? 1) > 1 ? "cotas · " : ""}
                         presenteado(s)
-                        {gift.active ? "" : " · removido da lista"}
                       </p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => toggleGift.mutate({ id: gift.id, active: !gift.active })}
-                      disabled={toggleGift.isPending}
-                      aria-label={gift.active ? `Remover ${gift.name}` : `Restaurar ${gift.name}`}
-                      title={gift.active ? "Remover da lista" : "Restaurar na lista"}
+                      onClick={() => removeGift.mutate(gift.id)}
+                      aria-label={`Remover ${gift.name}`}
                     >
-                      {gift.active ? <Trash2 className="size-4" /> : <Undo2 className="size-4" />}
+                      <Trash2 className="size-4" />
                     </Button>
                   </CardContent>
                 </Card>
@@ -661,14 +663,6 @@ function CouplePanel() {
                             : "Cancelado"}
                       </Badge>
                     </div>
-                    {order.status !== "paid" ? (
-                      <Button
-                        size="sm"
-                        onClick={() => updateOrder.mutate({ id: order.id, status: "paid" })}
-                      >
-                        Marcar pago
-                      </Button>
-                    ) : null}
                   </div>
                 </CardContent>
               </Card>
@@ -684,15 +678,7 @@ function CouplePanel() {
           </TabsContent>
 
           <TabsContent value="rsvps" className="mt-6 space-y-6">
-            <GuestListTab weddingId={weddingId} />
-            {weddingId ? <GuestSignupsCard weddingId={weddingId} /> : null}
-            <InviteManager
-              weddingId={weddingId}
-              roles={["guest"]}
-              title="Convidar convidados"
-              description="Gere um link e um QR Code para cada convidado criar o login e acessar o site."
-            />
-            <CoOwnersCard weddingId={weddingId} />
+            <GuestsWorkspace weddingId={weddingId} />
           </TabsContent>
 
           <TabsContent value="appearance" className="mt-6">

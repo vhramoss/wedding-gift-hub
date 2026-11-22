@@ -21,6 +21,8 @@ export const Route = createFileRoute("/_authenticated/convite/$token")({
       },
       { property: "og:title", content: "Convite de acesso" },
       { property: "og:description", content: "Ative seu acesso ao site do casamento." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: RedeemInvitePage,
@@ -38,6 +40,7 @@ function RedeemInvitePage() {
   const [guestCpf, setGuestCpf] = useState("");
   const [contactKind, setContactKind] = useState<"phone" | "cpf" | "email">("phone");
   const [saving, setSaving] = useState(false);
+  const [weddingSlug, setWeddingSlug] = useState<string | null>(null);
 
   async function registerGuest() {
     setSaving(true);
@@ -71,9 +74,15 @@ function RedeemInvitePage() {
         const row = info?.[0];
         if (row?.guest_name && row.slug) {
           queryClient.invalidateQueries({ queryKey: ["my-roles"] });
-          navigate({ to: "/casamento/$slug/confirmar", params: { slug: row.slug }, replace: true });
+          setWeddingSlug(row.slug);
+          setRole("guest");
+          setState("ok");
+          queryClient.invalidateQueries({ queryKey: ["home-wedding"] });
           return;
         }
+        setState("error");
+        setMessage("Peça aos noivos seu convite individual. Um convite geral não permite confirmar presença.");
+        return;
       }
       setRole(redeemedRole);
       if (redeemedRole === "owner") {
@@ -120,7 +129,13 @@ function RedeemInvitePage() {
           <CardContent className="flex flex-col items-center gap-4">
             {state === "ok" && <CheckCircle2 className="size-10 text-accent" />}
             {state === "error" && <XCircle className="text-destructive size-10" />}
-            {state === "ok" && role === "guest" && (
+            {state === "ok" && role === "guest" && weddingSlug && (
+              <div className="flex w-full flex-col gap-3">
+                <Button onClick={() => navigate({ to: "/casamento/$slug/confirmar", params: { slug: weddingSlug } })}>Confirmar presença agora</Button>
+                <Button variant="outline" onClick={() => navigate({ to: "/casamento/$slug", params: { slug: weddingSlug }, replace: true })}>Confirmar depois · Ver o casamento</Button>
+              </div>
+            )}
+            {state === "ok" && role === "guest" && !weddingSlug && (
               <div className="w-full space-y-3">
                 <p className="text-sm text-muted-foreground">
                   Informe seu nome completo e só um destes dados: telefone, CPF ou e-mail. Use o mesmo que você passou para os noivos.

@@ -34,8 +34,7 @@ export function GuestSignupsCard({ weddingId }: { weddingId: string }) {
           <UserCheck className="size-5 text-accent" /> Perfis criados pelo convite
         </CardTitle>
         <CardDescription>
-          Quem abriu o QR Code e se cadastrou com nome e CPF. Essa lista é só para acompanhamento:
-          para confirmar presença, o CPF precisa estar na lista de convidados acima.
+          Contas criadas pelo convite. A confirmação de presença pertence ao convidado vinculado ao convite individual.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -61,7 +60,7 @@ export function GuestSignupsCard({ weddingId }: { weddingId: string }) {
         {rows.length === 0 ? (
           <p className="text-sm text-muted-foreground">Ninguém criou perfil ainda.</p>
         ) : (
-          <div className="divide-y divide-border/60 rounded-lg border border-border/60">
+          <div className="max-h-96 overflow-y-auto divide-y divide-border/60 rounded-lg border border-border/60">
             {rows.map((r) => (
               <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
                 <span>

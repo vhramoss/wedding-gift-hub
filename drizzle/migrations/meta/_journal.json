@@ -15,6 +15,76 @@
       "when": 1792864255479,
       "tag": "0001_guest_signup_one_contact",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794678626513,
+      "tag": "0002_secure_invite_rsvp_and_public_receipt",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794678795391,
+      "tag": "0003_allow_explicit_unlimited_gifts",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794792293232,
+      "tag": "0004_guest_pays_commission_default",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794875345251,
+      "tag": "0005_protect_wedding_public_projection",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794966107445,
+      "tag": "0006_require_connected_gift_payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794966159838,
+      "tag": "0007_restrict_financial_operations_to_server",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794966230251,
+      "tag": "0008_moderate_and_limit_guest_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795320734183,
+      "tag": "0009_hide_internal_order_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795321716985,
+      "tag": "0010_linked_guest_destinations_and_write_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795322026841,
+      "tag": "0011_provider_only_financial_updates",
+      "breakpoints": true
     }
   ]
 }

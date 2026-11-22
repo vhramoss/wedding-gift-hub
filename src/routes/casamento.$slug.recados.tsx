@@ -25,6 +25,8 @@ export const Route = createFileRoute("/casamento/$slug/recados")({
       },
       { property: "og:title", content: "Recados aos noivos · Casamento" },
       { property: "og:description", content: "Mural de mensagens dos convidados para o casal." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: MessagesPage,
@@ -86,7 +88,7 @@ function MessagesPage() {
     onSuccess: () => {
       setBody("");
       setAgreed(false);
-      toast.success("Recado enviado!");
+      toast.success("Recado enviado para aprovação dos noivos!");
       queryClient.invalidateQueries({ queryKey: ["wedding-messages", wedding?.id] });
     },
     onError: (e: Error) => toast.error("Não deu para enviar", { description: e.message }),
@@ -99,7 +101,7 @@ function MessagesPage() {
       <h1 className="text-center font-display text-3xl sm:text-4xl">Deixe seu recado</h1>
       <div className="divider-gold mx-auto my-8 w-32" />
       <p className="mx-auto max-w-xl text-center text-muted-foreground">
-        Escreva uma mensagem para o casal. Ela aparece aqui no mural para todos os convidados.
+        Escreva uma mensagem para o casal. Após a aprovação dos noivos, ela aparece no mural.
       </p>
 
       <Card className="shadow-card mt-10">

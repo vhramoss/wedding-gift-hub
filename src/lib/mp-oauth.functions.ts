@@ -69,10 +69,12 @@ export const completeMpConnect = createServerFn({ method: "POST" })
       ? new Date(Date.now() + token.expires_in * 1000).toISOString()
       : null;
 
-    const { error } = await context.supabase.rpc("save_wedding_mp_account", {
+    if (!token.access_token) throw new Error("Não foi possível conectar o recebimento.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.rpc("save_wedding_mp_account", {
       p_wedding_id: data.weddingId,
       p_mp_user_id: (token.user_id ?? null) as number,
-      p_access_token: token.access_token!,
+      p_access_token: token.access_token,
       p_refresh_token: token.refresh_token ?? "",
       p_public_key: token.public_key ?? "",
       p_expires_at: expiresAt as string,
