@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import type { Database } from "@/integrations/supabase/types";
+import type { PublicWeddingDatabase } from "@/lib/public-wedding";
 
 export const getWeddingPreview = createServerFn({ method: "GET" })
   .inputValidator((data) => z.object({ slug: z.string().min(1).max(200) }).parse(data))
@@ -9,26 +9,19 @@ export const getWeddingPreview = createServerFn({ method: "GET" })
     const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
     const url = process.env["SUPABASE_URL"];
     if (!key || !url) return null;
-
-    const client = createClient<Database>(url, key, {
+    const client = createClient<PublicWeddingDatabase>(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: {
         fetch: (input, init) => {
           const h = new Headers(init?.headers);
-          if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) {
-            h.delete("Authorization");
-          }
+          if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) h.delete("Authorization");
           h.set("apikey", key);
           return fetch(input, { ...init, headers: h });
         },
       },
     });
-
-    const { data: row } = await client
-      .from("weddings")
+    const { data: row } = await client.from("wedding_public")
       .select("bride_name, groom_name, tagline, welcome_message, cover_image_url, wedding_date")
-      .eq("slug", data.slug)
-      .maybeSingle();
-
+      .eq("slug", data.slug).maybeSingle();
     return row ?? null;
   });

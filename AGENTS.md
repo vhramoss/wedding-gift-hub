@@ -12,3 +12,5 @@
 - Use CoverPhotoPreview with viewport-based image geometry for cover upload and panel previews; gallery previews reuse PhotoCarousel to prevent a second display crop.
 
 - Guest-facing availability and dependent-name parsing use shared pure helpers with rule tests to keep display and editing consistent.
+- Public wedding reads use wedding_public, while management reads remain on weddings, to preserve visitor access without exposing private settings.
+- When a deployment predates the generated view schema, keep its explicit public-only type projection in a separate module and reuse the existing client session; never edit generated client or schema files.

@@ -1,17 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { publicWeddingClient, validPublicWedding } from "@/lib/public-wedding";
 
 export function useWedding(slug: string) {
   return useQuery({
     queryKey: ["wedding", slug],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("weddings")
+      const { data, error } = await publicWeddingClient
+        .from("wedding_public")
         .select("*")
         .eq("slug", slug)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      return validPublicWedding(data);
     },
   });
 }
