@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSession } from "@/hooks/useSession";
+import { useWedding } from "@/hooks/useWedding";
 import { giftQuoteKey, useGiftQuotes } from "@/hooks/useGiftQuotes";
 import { completeQuoteTotal } from "@/lib/gift-quote-rules";
 import { computeCharge, formatBRL, PAYMENT_LABELS, type PaymentMethod } from "@/lib/br";
@@ -76,6 +77,7 @@ const METHODS: { id: PaymentMethod; hint: string }[] = [
 
 function CheckoutPage() {
   const { slug, giftId } = Route.useParams();
+  const { data: wedding, isLoading: weddingLoading } = useWedding(slug);
   const { user, loading } = useSession();
   const navigate = useNavigate();
 
@@ -117,21 +119,21 @@ function CheckoutPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("gifts")
-        .select(
-          "*, weddings!inner(id, slug, bride_name, groom_name)",
-        )
+        .select("*")
         .eq("id", giftId)
+        .eq("wedding_id", wedding?.id ?? "00000000-0000-4000-8000-000000000000")
         .maybeSingle();
       if (error) throw error;
       return data;
     },
+    enabled: Boolean(wedding?.id),
   });
 
   const gift = giftQuery.data;
-  const wedding = gift?.weddings;
 
   const mpConfig = useQuery({
     queryKey: ["mp-config", gift?.wedding_id ?? null],
+    enabled: Boolean(gift?.wedding_id),
     queryFn: () =>
       getMercadoPagoConfig({
         data: gift?.wedding_id ? { weddingId: gift.wedding_id } : {},
@@ -281,7 +283,7 @@ function CheckoutPage() {
     }
   };
 
-  if (loading || mpConfig.isLoading || giftQuery.isLoading) {
+  if (loading || weddingLoading || mpConfig.isLoading || giftQuery.isLoading) {
     return (
       <div className="mx-auto max-w-3xl space-y-4 p-8">
         <Skeleton className="h-40 w-full" />
